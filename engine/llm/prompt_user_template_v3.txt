@@ -1,0 +1,49 @@
+Você receberá:
+1. O schema oficial do JSON BT ONE
+2. O texto completo de uma ou mais DTPs
+3. A Taxonomia GLOBAL
+4. A Taxonomia LATAM
+
+Sua tarefa é:
+- Consolidar todas as DTPs em UM processo
+- Gerar UM JSON BT ONE conforme o schema
+- Classificar TODAS as atividades individualmente
+
+-------------------------------
+SCHEMA OFICIAL (JSON Schema)
+-------------------------------
+<<< CONTEÚDO DO bt_one.schema.json >>>
+
+-------------------------------
+DTPs DO PROCESSO
+-------------------------------
+<<< TEXTO COMPLETO DE TODAS AS DTPs >>>
+
+-------------------------------
+TAXONOMIA GLOBAL
+-------------------------------
+<<< CONTEÚDO DA TAXONOMIA GLOBAL >>>
+
+-------------------------------
+TAXONOMIA LATAM
+-------------------------------
+<<< CONTEÚDO DA TAXONOMIA LATAM >>>
+
+-------------------------------
+REGRAS OBRIGATÓRIAS
+-------------------------------
+1. Retorne APENAS JSON válido
+2. NÃO inclua explicações, comentários ou markdown
+3. Preencha TODOS os campos obrigatórios do schema
+4. Não invente informações não explícitas
+5. Preserve a ordem lógica das atividades
+6. Gere exatamente UMA entrada de taxonomia por atividade
+7. A Taxonomia LATAM só pode ser preenchida se houver correspondência GLOBAL
+8. A confiança deve ser um número entre 0 e 1
+9. Se não houver correspondência clara, use string vazia ""
+10. O JSON final deve ser validável contra o schema
+
+-------------------------------
+SAÍDA FINAL
+-------------------------------
+Retorne APENAS o JSON final consolidado.
