@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Matriz de Habilidade (Skill Matrix)</title>
+<style>
+  body{font-family:Arial,sans-serif;margin:0;background:#faf8ff}
+  h2{margin:0 0 8px}
+  .status{padding:6px 10px;border:1px solid #ddd;background:#f7f7f7;margin:8px 0 10px}
+  .ok{border-color:#c8e6c9;background:#e8f5e9}
+  .err{border-color:#ffcdd2;background:#ffebee}
+
+  /* ===== Header padrão Accenture (igual Capacity/FMEA) ===== */
+  .header{background:#6a1b9a;color:#fff;padding:12px 18px;border-radius:0}
+  .header h2{margin:0;font-size:20px}
+  .sub{font-size:13px;opacity:.95;margin-top:2px}
+
+  /* ===== Toolbar padrão ===== */
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 18px}
+  button{padding:6px 10px;cursor:pointer;border-radius:8px;border:1px solid #ccc;background:#fff;font-weight:600}
+  button.primary{background:#6a1b9a;color:#fff;border-color:#6a1b9a}
+
+  main{padding:0 18px 24px}
+
+  .wrap{overflow-x:auto;border:1px solid #bbb}
+  table{border-collapse:collapse;width:max-content;min-width:100%;table-layout:auto}
+  th,td{border:1px solid #999;padding:6px;text-align:center;white-space:nowrap;min-width:240px}
+  .p1{background:#6a1b9a;color:#fff;font-weight:bold}
+  .p2{background:#7e57c2;color:#fff;font-weight:bold}
+  .soft{background:#ede7f6;font-weight:bold}
+  .fixed{background:#f3e5f5;min-width:140px}
+  input,select{width:100%;box-sizing:border-box;white-space:nowrap}
+  .hdr{display:grid;grid-template-columns:1fr 26px;gap:6px;align-items:center}
+  .x{border:1px solid #ccc;background:#fff;cursor:pointer;border-radius:4px;padding:2px 6px}
+  .mini{font-size:12px;margin-top:8px;color:#333}
+
+  .adbox{margin-top:14px;border:1px solid #bbb;padding:10px}
+  .left{background:#6a1b9a;color:#fff;font-weight:bold;text-align:left;min-width:420px}
+  .calc{background:#fff2cc;font-weight:bold}
+
+  /* Cores condicionais PROCESSOS (igual Excel) */
+  .lvlP,.lvlNA{background:#e0e0e0}
+  .lvl0{background:#ff6b6b;color:#000}
+  .lvl1{background:#ffb74d;color:#000}
+  .lvl2{background:#fff176;color:#000}
+  .lvl3{background:#aed581;color:#000}
+  .lvl4{background:#00c853;color:#000}
+
+  /* Legenda */
+  .legendTable{border-collapse:collapse;margin-top:8px;width:520px;max-width:100%}
+  .legendTable td,.legendTable th{border:1px solid #999;padding:6px;min-width:auto;text-align:left}
+  .chip{width:50px;text-align:center}
+
+  /* Resumo */
+  .summary{margin-top:14px;border:1px solid #bbb;padding:10px}
+  .summary h3{margin:0 0 8px}
+  .summary ul{margin:0;padding-left:18px}
+  .summary li{margin:4px 0}
+
+
+  @media print{
+    .toolbar{display:none !important;}
+    body{background:#fff;}
+    main{padding:0 10px 10px;}
+    .status{border:0;}
+  }
+
+  /* === Colunas de Atividades (compactas) === */
+.col-atividade {
+  max-width: 280px;
+  min-width: 280px;
+  width: 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.col-atividade input{
+  width:100%;
+  box-sizing:border-box;
+
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* =========================================================
+   FIX DEFINITIVO – COLUNAS DE ATIVIDADES (TABELA ADICIONAIS)
+   ========================================================= */
+
+/* 1. Força layout fixo só na tabela de Adicionais */
+#adicionais{
+  table-layout: fixed !important;
+  width: 100% !important;
+}
+
+/* 2. Sobrescreve COMPLETAMENTE a regra global th,td */
+#adicionais th,
+#adicionais td{
+  min-width: unset !important;
+  width: 280px !important;
+  max-width: 280px !important;
+
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* 3. Inputs NÃO podem estourar a célula */
+#adicionais input{
+  max-width: 100% !important;
+  box-sizing: border-box;
+
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h2>Skill Matrix</h2>
+  <div class="sub">Portal BT • Piloto RTR • Accenture • Business Transformation</div>
+</div>
+<main>
+<div id="status" class="status">Carregando atividades do JSON…</div>
+
+<div class="toolbar">
+  <button class="primary" type="button" onclick="saveSkill()">💾 Salvar</button>
+  <button type="button" onclick="goMenu()">🏠 Menu</button>
+  <button type="button" onclick="exportPDF()">🖨️ Salvar PDF</button>
+  <button type="button" onclick="exportExcel()">📊 Salvar Excel</button>
+
+  <button type="button" onclick="addRow()">➕ Adicionar usuário</button>
+  <button type="button" onclick="addCol('process')">➕ Atividade (Processos)</button>
+  <button type="button" onclick="addCol('other')">➕ Outras habilidades</button>
+  <button type="button" onclick="addCol('agile')">➕ Agile</button>
+  <button type="button" onclick="loadSkill()">📥 Carregar</button>
+  <button type="button" onclick="clearSkill()">🧹 Limpar</button>
+</div>
+
+<div class="wrap"><table id="matrix"></table></div>
+
+<div class="adbox">
+  <div style="font-weight:bold;margin:0 0 8px">Adicionais (Processos / Outras habilidades / Idiomas / Agile)</div>
+  <div class="wrap"><table id="adicionais"></table></div>
+</div>
+
+<div class="adbox">
+  <div style="font-weight:bold;margin:0 0 8px">Legenda</div>
+  <table class="legendTable">
+    <tr><th class="chip">P</th><td>Planejado</td></tr>
+    <tr><th class="chip">N/A</th><td>Não relevante</td></tr>
+    <tr><th class="chip lvl0">0</th><td>Relevante mas não tem conhecimento</td></tr>
+    <tr><th class="chip lvl1">1</th><td>Em treinamento ou treinamento concluído</td></tr>
+    <tr><th class="chip lvl2">2</th><td>Treinamento concluído e performando a atividade</td></tr>
+    <tr><th class="chip lvl3">3</th><td>Performa a atividade independentemente</td></tr>
+    <tr><th class="chip lvl4">4</th><td>Capaz de dar treinamentos, conhece todos os detalhes</td></tr>
+  </table>
+</div>
+
+<div class="summary">
+  <h3>Resumo dos Processos (gerado do JSON)</h3>
+  <div id="processSummary">Carregando…</div>
+</div>
+
+<div class="mini">
+  <b>Nível de Criticidade:</b> 1=Crítica | 2=Média | 3=Baixa &nbsp;|&nbsp;
+  <b>Legenda:</b> P, N/A, O, 1, 2, 3, 4
+</div>
+
+</main>
+
+<script>
+// fetch embutido (não depende de app.js)
+async function getJSON(endpoint){
+  const r = await fetch(`/${endpoint}`, {cache:'no-store'});
+  if(!r.ok) throw new Error(`HTTP ${r.status} em /${endpoint}`);
+  return r.json();
+}
+function setStatus(ok,msg){
+  const s=document.getElementById('status');
+  s.className='status '+(ok?'ok':'err');
+  s.textContent=msg;
+}
+
+const OPT=['P','N/A','O','1','2','3','4'];
+let cols={process:[],other:[],lang:['Inglês','Espanhol'],agile:['Pipefy','IW','Lifecycle']};
+let crit={process:[],other:[],lang:['2','2'],agile:['2','2','2']};
+let rows=[];
+
+// Adicionais manuais por bloco/coluna
+let pk={process:[],other:[],lang:['',''],agile:['','','']};
+let pn={process:[],other:[],lang:['',''],agile:['','','']};
+
+init();
+async function init(){
+  try{
+    const atv=await getJSON('atividades');
+    cols.process=(atv||[]).map(a=>a?.descricao||'').filter(x=>x.trim()!=='');
+    crit.process=cols.process.map(_=>'2');
+    cols.lang=['Inglês','Espanhol'];
+    cols.agile=['Pipefy','IW','Lifecycle'];
+    syncManual();
+    if(!rows.length) addRow(false);
+    setStatus(true,`Atividades carregadas do JSON: ${cols.process.length}`);
+    renderAll();
+    renderResumoProcessos();
+  }catch(e){
+    setStatus(false,`ERRO ao carregar JSON: ${e.message}`);
+    syncManual();
+    if(!rows.length) addRow(false);
+    renderAll();
+    document.getElementById('processSummary').textContent='Não foi possível gerar o resumo (JSON não carregou).';
+  }
+}
+
+function syncManual(){
+  ['process','other','lang','agile'].forEach(g=>{
+    if(!Array.isArray(pk[g])) pk[g]=[];
+    if(!Array.isArray(pn[g])) pn[g]=[];
+    while(pk[g].length<cols[g].length) pk[g].push('');
+    while(pn[g].length<cols[g].length) pn[g].push('');
+    if(pk[g].length>cols[g].length) pk[g].splice(cols[g].length);
+    if(pn[g].length>cols[g].length) pn[g].splice(cols[g].length);
+  });
+}
+
+function ensureRow(r){
+  ['process','other','lang','agile'].forEach(g=>{
+    if(!r[g]) r[g]=[];
+    while(r[g].length<cols[g].length) r[g].push('P');
+    if(r[g].length>cols[g].length) r[g].splice(cols[g].length);
+  });
+}
+
+function addRow(renderNow=true){
+  const r={eid:'',nome:'',cl:'',process:[],other:[],lang:[],agile:[]};
+  ensureRow(r); rows.push(r);
+  if(renderNow) renderAll();
+}
+
+function addCol(group){
+  if(group==='lang') return;
+  cols[group].push('Nova coluna');
+  crit[group].push('2');
+  rows.forEach(r=>r[group].push('P'));
+  syncManual();
+  renderAll();
+}
+
+function removeCol(group,idx){
+  if(group==='lang') return;
+  cols[group].splice(idx,1);
+  crit[group].splice(idx,1);
+  rows.forEach(r=>r[group].splice(idx,1));
+  pk[group].splice(idx,1);
+  pn[group].splice(idx,1);
+  renderAll();
+}
+
+function makeCritSel(group,idx){
+  const sel=document.createElement('select');
+  ['1','2','3'].forEach(v=>{const o=document.createElement('option');o.value=v;o.text=v;sel.appendChild(o);});
+  sel.value=(crit[group][idx]??'2');
+  sel.onchange=()=>crit[group][idx]=sel.value;
+  return sel;
+}
+
+function makeHeader(group,idx,val){
+  const wrap=document.createElement('div'); wrap.className='hdr';
+  const inp=document.createElement('input');
+  inp.value=val||cols[group][idx]||'';
+  if(group==='lang') inp.readOnly=true;
+  else inp.oninput=()=>cols[group][idx]=inp.value;
+  wrap.appendChild(inp);
+  if(group!=='lang'){
+    const b=document.createElement('button'); b.className='x'; b.textContent='✕';
+    b.onclick=()=>removeCol(group,idx);
+    wrap.appendChild(b);
+  }
+  return wrap;
+}
+
+function colorClass(val){
+  if(val==='P') return 'lvlP';
+  if(val==='N/A') return 'lvlNA';
+  if(val==='O'||val==='0') return 'lvl0';
+  if(val==='1') return 'lvl1';
+  if(val==='2') return 'lvl2';
+  if(val==='3') return 'lvl3';
+  if(val==='4') return 'lvl4';
+  return '';
+}
+
+function makeValueSel(r,group,idx,td){
+  const sel=document.createElement('select');
+  OPT.forEach(v=>{const o=document.createElement('option');o.value=v;o.text=v;sel.appendChild(o);});
+  sel.value=r[group][idx]??'P';
+  if(group==='process') td.className=(td.className||'')+' '+colorClass(sel.value);
+  sel.onchange=()=>{
+    r[group][idx]=sel.value;
+    if(group==='process'){
+      td.className=td.className.replace(/\blvl(P|NA|0|1|2|3|4)\b/g,'').trim();
+      td.className=(td.className||'')+' '+colorClass(sel.value);
+    }
+    renderAdicionais();
+  };
+  return sel;
+}
+
+function renderAll(){ rows.forEach(ensureRow); syncManual(); renderMatrix(); renderAdicionais(); }
+
+function renderMatrix(){
+  const t=document.getElementById('matrix'); t.innerHTML='';
+  const groups=['process','other','lang','agile'];
+
+  const tr0=document.createElement('tr'); tr0.className='p1';
+  tr0.innerHTML=`<th colspan="3"></th>
+    <th colspan="${Math.max(cols.process.length,1)}">PROCESSOS - CONHECIMENTO NECESSÁRIO PARA TRABALHAR NA EQUIPE</th>
+    <th colspan="${Math.max(cols.other.length,1)}">Outras habilidades do membro da equipe</th>
+    <th colspan="${cols.lang.length}">Idiomas</th>
+    <th colspan="${cols.agile.length}">Agile Workforce</th>`;
+  t.appendChild(tr0);
+
+  const tr1=document.createElement('tr'); tr1.className='p2';
+  tr1.innerHTML='<th>EID</th><th>Nome</th><th>CL</th>';
+  groups.forEach(g=>{
+    const arr=cols[g];
+    if(!arr.length && (g==='process'||g==='other')){
+      const th=document.createElement('th'); th.appendChild(makeCritSel(g,0)); tr1.appendChild(th); return;
+    }
+    arr.forEach((_,i)=>{const th=document.createElement('th'); th.appendChild(makeCritSel(g,i)); tr1.appendChild(th);});
+  });
+  t.appendChild(tr1);
+
+  const tr2=document.createElement('tr'); tr2.className='soft';
+  tr2.innerHTML='<th>EID</th><th>Nome</th><th>CL</th>';
+  groups.forEach(g=>{
+    const arr=cols[g];
+    if(!arr.length && (g==='process'||g==='other')){
+      const th=document.createElement('th'); th.appendChild(makeHeader(g,0,'Nova coluna')); tr2.appendChild(th); return;
+    }
+    arr.forEach((c,i)=>{const th=document.createElement('th'); 
+if(g === 'process'){
+    th.classList.add('col-atividade');
+  }
+ th.appendChild(makeHeader(g,i,c)); tr2.appendChild(th);});
+  });
+  t.appendChild(tr2);
+
+  rows.forEach((r,ri)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="fixed"><input value="${r.eid}" oninput="rows[${ri}].eid=this.value"></td>
+                  <td class="fixed"><input value="${r.nome}" oninput="rows[${ri}].nome=this.value"></td>
+                  <td class="fixed"><input value="${r.cl}" oninput="rows[${ri}].cl=this.value"></td>`;
+
+    groups.forEach(g=>{
+      const arr=cols[g];
+      if(!arr.length && (g==='process'||g==='other')){
+        const td=document.createElement('td');
+        const sel=makeValueSel(r,g,0,td);
+        td.appendChild(sel); tr.appendChild(td); return;
+      }
+      r[g].forEach((_,i)=>{
+        const td=document.createElement('td');
+        const sel=makeValueSel(r,g,i,td);
+        td.appendChild(sel); tr.appendChild(td);
+      });
+    });
+
+    t.appendChild(tr);
+  });
+}
+
+function countValue(group,idx,val){
+  let n=0; rows.forEach(r=>{ if(r[group][idx]===val) n++; });
+  return n;
+}
+
+function notaGeral(group,idx){
+  const know=Number(pk[group][idx]||0), need=Number(pn[group][idx]||0);
+  if(!need) return 'Revisar';
+  return ((know/need)*100).toFixed(2)+'%';
+}
+
+function renderAdicionais(){
+  syncManual();
+  const ad=document.getElementById('adicionais'); ad.innerHTML='';
+  const all=[];
+  ['process','other','lang','agile'].forEach(g=>cols[g].forEach((name,idx)=>all.push({g,idx,name})));
+
+  const trH=document.createElement('tr'); trH.className='p1';
+  trH.innerHTML='<th colspan="3">Adicionais</th>';
+  all.forEach(()=>{const th=document.createElement('th'); th.textContent=''; trH.appendChild(th);});
+  ad.appendChild(trH);
+
+  const trN=document.createElement('tr'); trN.className='soft';
+  trN.innerHTML='<th colspan="3">Colunas / Atividades</th>';
+  all.forEach(c=>{const th=document.createElement('th'); th.textContent=c.name||''; trN.appendChild(th);});
+  ad.appendChild(trN);
+
+  const addLine=(label,cellFn)=>{
+    const tr=document.createElement('tr');
+    const th=document.createElement('th'); th.colSpan=3; th.className='left'; th.textContent=label;
+    tr.appendChild(th);
+    all.forEach(c=>tr.appendChild(cellFn(c)));
+    ad.appendChild(tr);
+  };
+
+  ['1','2','3','4'].forEach(level=>{
+    addLine(`Nota por habilidade (${level})`, c=>{const td=document.createElement('td'); td.className='calc'; td.textContent=countValue(c.g,c.idx,level); return td;});
+  });
+
+  addLine('# pessoas com conhecimento necessário para a atividade', c=>{
+    const td=document.createElement('td');
+    const inp=document.createElement('input'); inp.type='number'; inp.value=pk[c.g][c.idx]||'';
+    inp.oninput=()=>{pk[c.g][c.idx]=inp.value; renderAdicionais();};
+    td.appendChild(inp); return td;
+  });
+
+  addLine('# pessoas necessárias para essa atividade (incluindo backups)', c=>{
+    const td=document.createElement('td');
+    const inp=document.createElement('input'); inp.type='number'; inp.value=pn[c.g][c.idx]||'';
+    inp.oninput=()=>{pn[c.g][c.idx]=inp.value; renderAdicionais();};
+    td.appendChild(inp); return td;
+  });
+
+  addLine('Nota Geral', c=>{const td=document.createElement('td'); td.className='calc'; td.textContent=notaGeral(c.g,c.idx); return td;});
+}
+
+function renderResumoProcessos(){
+  const div=document.getElementById('processSummary');
+  if(!cols.process.length){div.textContent='Sem processos no JSON.';return;}
+  const ul=document.createElement('ul');
+  cols.process.forEach((d,i)=>{const li=document.createElement('li'); li.textContent=`Atividade ${i+1}: ${d}`; ul.appendChild(li);});
+  div.innerHTML=''; div.appendChild(ul);
+}
+
+function saveSkill(){
+  localStorage.setItem('skill_matrix_state', JSON.stringify({cols,crit,rows,pk,pn}));
+  alert('Skill Matrix salvo.');
+}
+function loadSkill(){
+  const raw=localStorage.getItem('skill_matrix_state');
+  if(!raw){alert('Nada salvo.');return;}
+  const p=JSON.parse(raw);
+  cols=p.cols||cols; crit=p.crit||crit; rows=p.rows||rows; pk=p.pk||pk; pn=p.pn||pn;
+  cols.lang=['Inglês','Espanhol']; cols.agile=['Pipefy','IW','Lifecycle'];
+  renderAll(); renderResumoProcessos();
+  alert('Skill Matrix carregado.');
+}
+function clearSkill(){
+  localStorage.removeItem('skill_matrix_state');
+  alert('Cache apagado.');
+}
+
+// ===== Menu (volta para a Home do FastAPI) =====
+function goMenu(){
+  window.location.href = '/';
+}
+
+// ===== Exportar PDF =====
+function exportPDF(){
+  window.print();
+}
+
+// ===== Exportar Excel (compatível - gera .xls a partir das tabelas atuais) =====
+function exportExcel(){
+  const now = new Date();
+  const stamp = now.toISOString().slice(0,19).replace(/[:T]/g,'-');
+  const filename = `skill_matrix_${stamp}.xls`;
+
+  const esc = (s)=> String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const title = 'Skill Matrix';
+  const subtitle = 'Portal BT • Piloto RTR • Accenture • Business Transformation';
+
+  const matrixHTML = document.getElementById('matrix')?.outerHTML || '';
+  const adicionaisHTML = document.getElementById('adicionais')?.outerHTML || '';
+  const legendHTML = document.querySelector('.legendTable')?.outerHTML || '';
+  const resumoHTML = document.getElementById('processSummary')?.innerHTML || '';
+
+  const html = `
+  <html><head><meta charset="UTF-8"></head><body>
+    <h2>${esc(title)}</h2>
+    <p>${esc(subtitle)}</p>
+
+    <h3>Matriz</h3>
+    ${matrixHTML}
+
+    <h3>Adicionais</h3>
+    ${adicionaisHTML}
+
+    <h3>Legenda</h3>
+    ${legendHTML}
+
+    <h3>Resumo dos Processos</h3>
+    ${resumoHTML}
+  </body></html>`;
+
+  const blob = new Blob([html], {type:'application/vnd.ms-excel;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+</script>
+
+<script>
+
+/* ===== BT ONE History (localStorage) ===== */
+const BTONE_HISTORY_KEY = 'BT_ONE_HISTORY';
+function btone_readStore(){ return JSON.parse(localStorage.getItem(BTONE_HISTORY_KEY) || '{}'); }
+function btone_writeStore(store){ localStorage.setItem(BTONE_HISTORY_KEY, JSON.stringify(store)); }
+function btone_latest(tool){ const s=btone_readStore(); const a=s[tool]||[]; return a[a.length-1]||null; }
+function btone_saveVersion(tool, user, data){
+  try{
+    const now = new Date();
+    const ymd = now.toISOString().slice(0,10).replace(/-/g,'');
+    const entry = { id: tool + '_' + user + '_' + ymd, tool, user, date: now.toLocaleString(), data };
+    const store = btone_readStore();
+    store[tool] = store[tool] || [];
+    store[tool].push(entry);
+    btone_writeStore(store);
+  }catch(e){ console.warn('BT ONE history save failed', e); }
+}
+
+(function(){
+  const TOOL = 'Skill Matrix';
+  const USER = "karla.gabriely.eloi";
+  const STORAGE_KEY = 'skill_matrix_state';
+
+  // Auto-carregar última versão salva (sem quebrar o JSON base)
+  window.addEventListener('DOMContentLoaded', function(){
+    try{
+      const last = btone_latest(TOOL);
+      if(last && last.data){
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(last.data));
+        if(typeof window.loadSkill === 'function') window.loadSkill();
+      }
+    }catch(e){ console.warn('BT ONE history load failed', e); }
+  });
+
+  // Wrap do saveSkill
+  const _orig = window.saveSkill;
+  if(typeof _orig === 'function'){
+    window.saveSkill = function(){
+      const ret = _orig.apply(this, arguments);
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const data = raw ? JSON.parse(raw) : null;
+        btone_saveVersion(TOOL, USER, data);
+      }catch(e){ console.warn('BT ONE history save failed', e); }
+      return ret;
+    };
+  }
+})();
+</script>
+
+</body>
+</html>

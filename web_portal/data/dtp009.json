@@ -1,0 +1,246 @@
+{
+"processo": {
+"nome": "Aprovação de lançamentos manuais no Protheus via Pipefy",
+"frequencia": "Mensalmente, durante o processo de fechamento contábil.",
+"objetivo": "Descrever de modo detalhado o processo de registro e aprovação de lançamentos manuais.",
+"escopo": "Lançamentos manuais usuais e não usuais feitos durante o processo de fechamento contábil para todas as empresas geridas no Protheus e integradas no processo da Accenture, que precisam ser aprovados conforme alçada definida pela Oncoclínicas até o 5º dia útil após o encerramento do fechamento contábil."
+},
+"entradas": [
+{
+"item": "01",
+"descricao": "Lançamentos manuais executados durante o processo de fechamento",
+"localizacao": "Y:\\8 Contabilidade\\8.4 Fechamento Contabil\\8.4.2 Atividades Fechamento",
+"obrigatorio": "S"
+},
+{
+"item": "02",
+"descricao": "Emails com solicitações de lançamentos manuais",
+"localizacao": "Y:\\8 Contabilidade\\8.4 Fechamento Contabil\\8.4.2 Atividades Fechamento",
+"obrigatorio": "Ad Hoc"
+}
+],
+"saidas": [
+{
+"item": "01",
+"descricao": "Registro do lançamento manual no Protheus",
+"localizacao": "Protheus",
+"obrigatorio": "S"
+},
+{
+"item": "02",
+"descricao": "Aprovação de lançamento manual no Pipefy",
+"localizacao": "Pipefy",
+"obrigatorio": "S"
+}
+],
+"atividades": [
+{
+"ordem": 1,
+"descricao": "Identificar, classificar e executar lançamentos manuais usuais e não usuais no Protheus durante o fechamento contábil, segregando-os conforme definição da Oncoclínicas e garantindo que todos sejam submetidos para aprovação no Pipefy até o 5º dia útil após o encerramento do fechamento."
+},
+{
+"ordem": 2,
+"descricao": "Extrair o relatório CT2 no Protheus com filtro de lote, data dos lançamentos e usuário, e preparar tabela dinâmica em Excel para sumarizar data de lançamento, lote, conta débito, conta crédito e usuário, agrupando lançamentos por natureza de transação e tratando exceções de lançamentos com múltiplas contas."
+},
+{
+"ordem": 3,
+"descricao": "Criar card de aprovação no Pipefy para cada grupo de lançamentos manuais, preenchendo data, lote, contas, descrições, usuário, valores e anexando CT2 base, caminho da pasta com arquivos suporte e, quando aplicável, e-mails de solicitação da Oncoclínicas."
+},
+{
+"ordem": 4,
+"descricao": "Realizar aprovação de lançamentos manuais no Pipefy conforme alçadas definidas para lançamentos usuais e não usuais, validando documentos anexos, histórico (pastas e e-mails), valores, classificação usual/não usual, alçada correta e registrando decisão e justificativa no card, inclusive aprovação da Oncoclínicas em até 5 dias úteis após o fechamento."
+},
+{
+"ordem": 5,
+"descricao": "Registrar lançamentos de correção em lote específico (CORXXX), incluindo ajustes, correções de lançamentos integrados incorretamente e reclassificações entre contas ou centros de custo, garantindo a rastreabilidade para mensuração da assertividade de lançamentos contábeis."
+},
+{
+"ordem": 6,
+"descricao": "Apurar mensalmente os indicadores de % de lançamentos manuais e % de assertividade de lançamentos, utilizando a base CT2, segregando por tipo de lote (manuais, automáticos e correções – CORXXX) para cálculo e acompanhamento dos KPIs."
+}
+],
+"sistemas": [
+{
+"nome": "Protheus",
+"descricao": "ERP da Oncoclínicas utilizado para registro de lançamentos contábeis manuais (via TXT ou inclusão manual) e geração do relatório CT2 base para conciliações e indicadores."
+},
+{
+"nome": "Pipefy",
+"descricao": "SaaS de workflow utilizado para submissão, documentação, roteamento por alçada e aprovação de lançamentos manuais contábeis."
+}
+],
+"riscos": [
+{
+"descricao": "Conflito de segregação de funções caso o executor do lançamento manual possa aprovar o próprio lançamento, comprometendo a independência da aprovação."
+}
+],
+"controles": [
+{
+"descricao": "Controle de segregação de funções no Pipefy: a ferramenta não permite que o executor do lançamento aprove seu próprio lançamento; cada pessoa é responsável por submeter seus lançamentos para aprovação por outro usuário conforme diretriz do cliente."
+},
+{
+"descricao": "Alçadas de aprovação formalmente definidas para lançamentos manuais usuais por faixas de valor (Supervisor, Coordenador, Gerente, Gerente Sênior da ACC e Diretor de Controladoria da Oncoclínicas), garantindo níveis adequados de revisão proporcional ao impacto financeiro."
+},
+{
+"descricao": "Alçadas de aprovação formalmente definidas para lançamentos manuais não usuais por faixas de valor (Supervisor, Coordenador, Gerente, Gerente Sênior da ACC e Diretor de Controladoria da Oncoclínicas), assegurando maior rigor para transações não recorrentes."
+},
+{
+"descricao": "Configuração automática do Pipefy para determinar a alçada de aprovação com base nas informações inseridas no card (valor e tipo de lançamento usual ou não usual), reduzindo risco de erro manual na definição de aprovadores."
+},
+{
+"descricao": "Utilização obrigatória de lote específico CORXXX para todos os lançamentos de correção, possibilitando a identificação e mensuração do indicador de assertividade de lançamentos contábeis."
+},
+{
+"descricao": "Monitoramento de indicadores mensais de % de lançamentos manuais e % de assertividade de lançamentos com base na CT2, permitindo acompanhamento da qualidade do processo e direcionamento de ações corretivas."
+},
+{
+"descricao": "Retenção eletrônica de arquivos base para execução de lançamentos manuais, solicitações via e-mail e aprovações no Pipefy, garantindo trilha de auditoria e evidências de suporte."
+}
+],
+"taxonomia": [
+{
+"atividade_dtp": {
+"ordem": 1,
+"descricao": "Identificar, classificar e executar lançamentos manuais usuais e não usuais no Protheus durante o fechamento contábil, segregando-os conforme definição da Oncoclínicas e garantindo que todos sejam submetidos para aprovação no Pipefy até o 5º dia útil após o encerramento do fechamento."
+},
+"taxonomia_global": {
+"L0": "",
+"L1": "Intelligent Finance Operations",
+"L2": "Core Finance",
+"L3": "Record to Report",
+"L4": "Journals",
+"L5": "Create and process journals",
+"confianca": 0.85
+},
+"taxonomia_latam": {
+"L0": "Enterprise Services",
+"L1": "Intelligent Finance Operations",
+"L2": "Core Finance",
+"L3": "Record to Report",
+"L4": "Journals",
+"L5": "Criar, validar e postar lançamentos manuais",
+"confianca": 0.9
+}
+},
+{
+"atividade_dtp": {
+"ordem": 2,
+"descricao": "Extrair o relatório CT2 no Protheus com filtro de lote, data dos lançamentos e usuário, e preparar tabela dinâmica em Excel para sumarizar data de lançamento, lote, conta débito, conta crédito e usuário, agrupando lançamentos por natureza de transação e tratando exceções de lançamentos com múltiplas contas."
+},
+"taxonomia_global": {
+"L0": "",
+"L1": "Intelligent Finance Operations",
+"L2": "Core Finance",
+"L3": "Record to Report",
+"L4": "General Ledger Reconciliation",
+"L5": "Perform account reconciliations",
+"confianca": 0.7
+},
+"taxonomia_latam": {
+"L0": "Enterprise Services",
+"L1": "Intelligent Finance Operations",
+"L2": "Core Finance",
+"L3": "Record to Report",
+"L4": "General Ledger Reconciliation",
+"L5": "Conciliar contas contábeis críticas (provisões, clearing, suspense)",
+"confianca": 0.75
+}
+},
+{
+"atividade_dtp": {
+"ordem": 3,
+"descricao": "Criar card de aprovação no Pipefy para cada grupo de lançamentos manuais, preenchendo data, lote, contas, descrições, usuário, valores e anexando CT2 base, caminho da pasta com arquivos suporte e, quando aplicável, e-mails de solicitação da Oncoclínicas."
+},
+"taxonomia_global": {
+"L0": "",
+"L1": "Intelligent Finance Operations",
+"L2": "Core Finance",
+"L3": "Record to Report",
+"L4": "Journals",
+"L5": "Create and process journals",
+"confianca": 0.75
+},
+"taxonomia_latam": {
+"L0": "Enterprise Services",
+"L1": "Intelligent Finance Operations",
+"L2": "Core Finance",
+"L3": "Record to Report",
+"L4": "Journals",
+"L5": "Validar documentação de suporte do solicitante",
+"confianca": 0.8
+}
+},
+{
+"atividade_dtp": {
+"ordem": 4,
+"descricao": "Realizar aprovação de lançamentos manuais no Pipefy conforme alçadas definidas para lançamentos usuais e não usuais, validando documentos anexos, histórico (pastas e e-mails), valores, classificação usual/não usual, alçada correta e registrando decisão e justificativa no card, inclusive aprovação da Oncoclínicas em até 5 dias úteis após o fechamento."
+},
+"taxonomia_global": {
+"L0": "",
+"L1": "Intelligent Finance Operations",
+"L2": "Core Finance",
+"L3": "Record to Report",
+"L4": "Journals",
+"L5": "Create and process journals",
+"confianca": 0.8
+},
+"taxonomia_latam": {
+"L0": "Enterprise Services",
+"L1": "Intelligent Finance Operations",
+"L2": "Core Finance",
+"L3": "Record to Report",
+"L4": "Journals",
+"L5": "Validar compliance SOX (segregação, evidências, approvals)",
+"confianca": 0.85
+}
+},
+{
+"atividade_dtp": {
+"ordem": 5,
+"descricao": "Registrar lançamentos de correção em lote específico (CORXXX), incluindo ajustes, correções de lançamentos integrados incorretamente e reclassificações entre contas ou centros de custo, garantindo a rastreabilidade para mensuração da assertividade de lançamentos contábeis."
+},
+"taxonomia_global": {
+"L0": "",
+"L1": "Intelligent Finance Operations",
+"L2": "Core Finance",
+"L3": "Record to Report",
+"L4": "Period Close & Consolidations",
+"L5": "Initiate_Process late adjustments",
+"confianca": 0.75
+},
+"taxonomia_latam": {
+"L0": "Enterprise Services",
+"L1": "Intelligent Finance Operations",
+"L2": "Core Finance",
+"L3": "Record to Report",
+"L4": "Journals",
+"L5": "Analisar rejeições de JE (workflow or system errors)",
+"confianca": 0.8
+}
+},
+{
+"atividade_dtp": {
+"ordem": 6,
+"descricao": "Apurar mensalmente os indicadores de % de lançamentos manuais e % de assertividade de lançamentos, utilizando a base CT2, segregando por tipo de lote (manuais, automáticos e correções – CORXXX) para cálculo e acompanhamento dos KPIs."
+},
+"taxonomia_global": {
+"L0": "",
+"L1": "Intelligent Finance Operations",
+"L2": "Core Finance",
+"L3": "Record to Report",
+"L4": "Financial Reporting",
+"L5": "Perform trending and variance analysis",
+"confianca": 0.8
+},
+"taxonomia_latam": {
+"L0": "Enterprise Services",
+"L1": "Intelligent Finance Operations",
+"L2": "Core Finance",
+"L3": "Record to Report",
+"L4": "Atividades Transversais / Governança RTR",
+"L5": "Criar e monitorar KPIs/SLAs/BOIs",
+"confianca": 0.9
+}
+}
+]
+}

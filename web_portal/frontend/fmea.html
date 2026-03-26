@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FMEA - Portal BT</title>
+<style>
+  body{font-family:Arial,sans-serif;margin:0;background:#faf8ff}
+  h2{margin:0 0 6px}
+  h3{margin:16px 0 6px}
+  .header{background:#6a1b9a;color:#fff;padding:12px 18px;border-radius:0}
+  .sub{font-size:13px;opacity:.95}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 18px}
+  button{padding:6px 10px;cursor:pointer;border-radius:8px;border:1px solid #ccc;background:#fff;font-weight:600}
+  button.primary{background:#6a1b9a;color:#fff;border-color:#6a1b9a}
+  .wrap{overflow-x:auto;border:1px solid #bbb;border-radius:10px;background:#fff}
+  table{border-collapse:collapse;min-width:2200px;width:max-content}
+  th,td{border:1px solid #999;padding:6px;vertical-align:top}
+  th{background:#ede7f6;font-size:12px}
+  td textarea, td input, td select{width:100%;min-height:40px;resize:vertical}
+  td textarea{white-space:pre-wrap}
+  .num{width:70px}
+  .calc{background:#fff2cc;font-weight:bold;text-align:center}
+  .footer{margin-top:16px;font-size:12px;color:#333}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h2>FMEA</h2>
+  <div class="sub">Portal BT • Piloto RTR • Accenture • Business Transformation</div>
+</div>
+
+<div class="toolbar">
+  <button class="primary" onclick="saveFMEA()">💾 Salvar</button>
+  <button onclick="goMenu()">🏠 Menu</button>
+  <button onclick="exportPDF()">🖨️ Salvar PDF</button>
+  <button onclick="exportExcel()">📊 Salvar Excel</button>
+  <button onclick="addRow()">➕ Incluir Linha</button>
+  <button onclick="loadFMEA()">📂 Carregar</button>
+  <button onclick="clearFMEA()">🧹 Limpar</button>
+
+ <button onclick="openFMEAInsights()">💡 Insights</button>
+ <span style="display:inline-flex;align-items:center;gap:6px;border:1px solid #ccc;background:#fff;padding:6px 10px;border-radius:8px;font-weight:700;color:#3b1a5a">
+   <label style="font-size:12px;font-weight:800" for="refPeriod">Ref.</label>
+   <input id=\"refPeriod\" type="month" style="border:1px solid #ddd;border-radius:6px;padding:4px 6px;min-width:130px" type=\"month\">
+ </span>
+</div>
+
+<div class="wrap">
+<table id="fmea">
+<thead>
+<tr>
+<th>Process</th>
+<th>Etapa</th>
+<th>Nome da Etapa do Processo</th>
+<th>Potencial Modo de Falha</th>
+<th>Potenciais efeitos da falha</th>
+<th>SEV</th>
+<th>Potenciais causas</th>
+<th>OCC</th>
+<th>Controles Atuais</th>
+<th>DET</th>
+<th>RPN</th>
+<th>Ações Recomendadas</th>
+<th>Data prevista</th>
+<th>Responsável</th>
+<th>Rev. SEV</th>
+<th>Rev. OCC</th>
+<th>Rev. DET</th>
+<th>Rev. RPN</th>
+<th>Apagar</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+
+<h3>Instrução de Preenchimento</h3>
+<div class="footer">
+<p><b>Process:</b> Processo</p>
+<p><b>Etapa:</b> Etapa do Processo</p>
+<p><b>Nome da Etapa do Processo:</b> Qual a etapa do processo?</p>
+<p><b>Potencial Modo de Falha:</b> O que pode dar errado com a saída desta etapa?</p>
+<p><b>Potenciais efeitos da falha:</b> Impacto nos requisitos do cliente e internos.</p>
+<p><b>SEV:</b> Severidade de 1 (baixo impacto) a 10 (alto impacto).</p>
+<p><b>Potenciais causas:</b> Causas (Xs) da falha.</p>
+<p><b>OCC:</b> Probabilidade de ocorrência de 1 (baixa) a 10 (alta).</p>
+<p><b>Controles Atuais:</b> Controles existentes.</p>
+<p><b>DET:</b> Probabilidade de detecção de 1 (fácil) a 10 (difícil).</p>
+<p><b>RPN:</b> SEV × OCC × DET.</p>
+<p><b>Ações Recomendadas:</b> Ações para reduzir ocorrência ou melhorar detecção.</p>
+<p><b>Rev. SEV / OCC / DET:</b> Valores após ações.</p>
+<p><b>Rev. RPN:</b> Rev. SEV × Rev. OCC × Rev. DET.</p>
+</div>
+
+<script>
+const tbody = document.querySelector('#fmea tbody');
+
+function numInput(v=''){
+  const i=document.createElement('input'); i.type='number'; i.min=1; i.max=10; i.value=v; i.className='num'; return i;
+}
+function textArea(v=''){ const t=document.createElement('textarea'); t.value=v; return t; }
+
+function addRow(data={}){
+  const tr=document.createElement('tr');
+  const cells=[
+    textArea(data.process||''),
+    textArea(data.etapa||''),
+    textArea(data.nome_etapa||''),
+    textArea(data.modo_falha||''),
+    textArea(data.efeito||''),
+    numInput(data.sev||''),
+    textArea(data.causa||''),
+    numInput(data.occ||''),
+    textArea(data.controle||''),
+    numInput(data.det||''),
+    document.createElement('div'),
+    textArea(data.acao||''),
+    (()=>{const d=document.createElement('input');d.type='date';d.value=data.data||'';return d;})(),
+    (()=>{const r=document.createElement('input');r.type='text';r.value=data.resp||'';return r;})(),
+    numInput(data.rsev||''),
+    numInput(data.rocc||''),
+    numInput(data.rdet||''),
+    document.createElement('div'),
+    (()=>{const b=document.createElement('button');b.textContent='🗑️';b.onclick=()=>tr.remove();return b;})()
+  ];
+  cells.forEach((c,i)=>{
+    const td=document.createElement('td');
+    if(i===10||i===17) td.className='calc';
+    td.appendChild(c); tr.appendChild(td);
+  });
+  tbody.appendChild(tr);
+  calcRow(tr);
+}
+
+function calcRow(tr){
+  const get=(i)=>tr.children[i].querySelector('input')?.value||'';
+  const sev=+get(5)||0, occ=+get(7)||0, det=+get(9)||0;
+  tr.children[10].textContent = sev*occ*det || '';
+  const rsev=+get(14)||0, rocc=+get(15)||0, rdet=+get(16)||0;
+  tr.children[17].textContent = rsev*rocc*rdet || '';
+}
+
+tbody.addEventListener('input',e=>{ calcRow(e.target.closest('tr')); });
+setDefaultRefPeriod();
+
+function saveFMEA(){
+ // ✅ garante que RPN e Rev.RPN estejam atualizados antes do snapshot
+ [...tbody.children].forEach(tr=>calcRow(tr));
+ const data=[...tbody.children].map(tr=>[...tr.children].map(td=>td.querySelector('input,textarea')?.value ?? td.textContent));
+ localStorage.setItem('fmea_state', JSON.stringify(data));
+ // Ref do mês (para insights/histórico)
+ try{
+   const rp = document.getElementById('refPeriod')?.value || new Date().toISOString().slice(0,7);
+   localStorage.setItem('fmea_ref_period', rp);
+ }catch(e){}
+ alert('FMEA salvo');
+}
+function loadFMEA(){
+  const raw=localStorage.getItem('fmea_state'); if(!raw) return;
+  tbody.innerHTML=''; JSON.parse(raw).forEach(r=>addRow({
+    process:r[0], etapa:r[1], nome_etapa:r[2], modo_falha:r[3], efeito:r[4], sev:r[5], causa:r[6], occ:r[7], controle:r[8], det:r[9], acao:r[11], data:r[12], resp:r[13], rsev:r[14], rocc:r[15], rdet:r[16]
+  }));
+}
+function clearFMEA(){ if(confirm('Limpar FMEA?')){ localStorage.removeItem('fmea_state'); tbody.innerHTML=''; }}
+
+function goMenu(){ window.location.href = '/'; }
+
+function setDefaultRefPeriod(){
+ const el = document.getElementById('refPeriod');
+ if(el && !el.value){ el.value = new Date().toISOString().slice(0,7); }
+}
+function openFMEAInsights(){
+ window.location.href = 'fmea_insights.html';
+}
+function exportPDF(){
+  window.print();
+}
+
+function exportExcel(){
+  const html = document.documentElement.outerHTML;
+  const blob = new Blob([html], {type:'application/vnd.ms-excel;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'FMEA.xls';
+  a.click();
+}
+
+
+
+function btone_shouldAutofillFMEA(){
+ // só auto-preenche do JSON quando NÃO existe versão salva
+ try{
+   const has = !!localStorage.getItem('fmea_state');
+   return !has && tbody.children.length===0;
+ }catch(e){
+   return tbody.children.length===0;
+ }
+}
+// Auto preencher a partir do JSON de atividades
+if(btone_shouldAutofillFMEA())
+fetch('/atividades').then(r=>r.json()).then(js=>{
+  js.forEach((p,i)=>{
+    addRow({process:p.processo||'Processo', etapa:i+1, nome_etapa:p.descricao||'', modo_falha:'', efeito:'', sev:5, causa:'', occ:5, controle:'', det:5, acao:'', rsev:5, rocc:5, rdet:5});
+  });
+});
+
+</script>
+
+<script>
+
+// ===== BT ONE History (localStorage) =====
+const BTONE_HISTORY_KEY = 'BT_ONE_HISTORY';
+function btone_readStore(){ return JSON.parse(localStorage.getItem(BTONE_HISTORY_KEY) || '{}'); }
+function btone_writeStore(store){ localStorage.setItem(BTONE_HISTORY_KEY, JSON.stringify(store)); }
+function btone_latest(tool){ const s=btone_readStore(); const a=s[tool]||[]; return a[a.length-1]||null; }
+function btone_saveVersion(tool, user, data){
+  const now = new Date();
+  const ymd = now.toISOString().slice(0,10).replace(/-/g,'');
+  const rp = (function(){try{return localStorage.getItem('fmea_ref_period') || document.getElementById('refPeriod')?.value || new Date().toISOString().slice(0,7);}catch(e){return new Date().toISOString().slice(0,7);}})();
+ const entry = { id: `${tool}_${user}_${ymd}_${Date.now()}`, tool, user, ref_period: rp, date: now.toLocaleString(), data };
+  const store = btone_readStore();
+  store[tool] = store[tool] || [];
+  store[tool].push(entry);
+  btone_writeStore(store);
+}
+
+(function(){
+  const TOOL = "FMEA";
+  const USER = "karla.gabriely.eloi";
+
+  // Auto-carregar última versão salva
+  window.addEventListener('DOMContentLoaded', ()=>{
+    try{
+      const last = btone_latest(TOOL);
+      if(last && last.data){
+        const rows = (last.data && last.data.rows) ? last.data.rows : last.data;
+          localStorage.setItem("fmea_state", JSON.stringify(rows));
+          try{ if(last.ref_period) localStorage.setItem('fmea_ref_period', last.ref_period); }catch(e){}
+        if(typeof window["loadFMEA"] === 'function'){
+          window["loadFMEA"]();
+        }
+      }
+    }catch(e){ console.warn('BT ONE history load failed', e); }
+  });
+
+  // Patch do salvar: salva como antes + grava no histórico
+  const __origSave = window["saveFMEA"];
+  if(typeof __origSave === 'function'){
+    window["saveFMEA"] = function(){
+      const ret = __origSave.apply(this, arguments);
+      try{
+        const raw = localStorage.getItem("fmea_state");
+        const rows = raw ? JSON.parse(raw) : null;
+        btone_saveVersion(TOOL, USER, { rows: rows });
+      }catch(e){ console.warn('BT ONE history save failed', e); }
+      return ret;
+    };
+  }
+})();
+</script>
+
+</body>
+</html>

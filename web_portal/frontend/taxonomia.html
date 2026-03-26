@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Taxonomia | BT ONE</title>
+
+  <style>
+    :root{--purple:#6a1b9a;--purple2:#7e57c2;--text:#1f1f1f;}
+    body{margin:0;font-family:Arial,sans-serif;background:#fff;color:var(--text)}
+    .topbar{background:linear-gradient(90deg,var(--purple),var(--purple2));color:#fff;padding:16px 22px;}
+    .topbar h1{margin:0;font-size:22px}
+    .topbar p{margin:4px 0 0;font-size:13px;opacity:.95}
+    .actions{padding:10px 22px;display:flex;gap:10px;border-bottom:1px solid #ddd;background:#fafafa;}
+    .actions button{border:none;padding:8px 14px;border-radius:10px;font-weight:700;cursor:pointer;}
+    .save{background:var(--purple);color:#fff}
+    .menu,.pdf,.excel{background:#eee}
+    main{padding:18px 22px}
+    .table-container{overflow-x:auto}
+    table{width:100%;min-width:2000px;border-collapse:collapse;font-size:12px;}
+    th,td{border:1px solid #ddd;padding:6px;vertical-align:top;background:#fff;}
+    th{background:#1f2937;color:#fff;text-align:center;position:sticky;top:0;z-index:3;}
+    .group{background:#111827}
+    .sticky{position:sticky;left:0;z-index:2;background:#f9fafb;min-width:320px;max-width:420px;}
+    td{white-space:normal;word-break:break-word;min-width:120px}
+    input,select{width:100%;font-size:12px}
+    .actions-col button{margin-right:4px;cursor:pointer}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Taxonomia</h1>
+  <p>BT ONE • RTR • Accenture • Business Transformation</p>
+</div>
+
+<div class="actions">
+  <button class="save" onclick="salvarTaxonomia()">💾 Salvar</button>
+  <button class="menu" onclick="location.href='/'">🏠 Menu</button>
+  <button class="pdf">📄 Salvar PDF</button>
+  <button class="excel">📊 Salvar Excel</button>
+</div>
+
+<main>
+<div class="table-container">
+<table id="taxTable">
+  <thead>
+    <tr>
+      <th rowspan="2" class="sticky">Atividade DTP</th>
+      <th colspan="6" class="group">Taxonomia Global</th>
+      <th colspan="6" class="group">Taxonomia LATAM</th>
+      <th colspan="3" class="group">Aprovação</th>
+      <th rowspan="2">Ação</th>
+    </tr>
+    <tr>
+      <th>L0</th><th>L1</th><th>L2</th><th>L3</th><th>L4</th><th>L5</th>
+      <th>L0</th><th>L1</th><th>L2</th><th>L3</th><th>L4</th><th>L5</th>
+      <th>Status</th><th>ID Aprovador</th><th>Data</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+</div>
+</main>
+
+<script>
+/* Histórico inline (não depende de history.js) */
+const HISTORY_KEY = 'BT_ONE_HISTORY';
+function listVersions(){ return JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}'); }
+function latest(tool){ const s=listVersions(); const a=s[tool]||[]; return a[a.length-1]||null; }
+function saveVersion(tool,user,data){
+  const now=new Date();
+  const ymd=now.toISOString().slice(0,10).replace(/-/g,'');
+  const entry={ id:`${tool}_${user}_${ymd}`, tool, user, date: now.toLocaleString(), data };
+  const store=listVersions();
+  store[tool]=store[tool]||[];
+  store[tool].push(entry);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(store));
+}
+
+const tbody = document.querySelector('#taxTable tbody');
+
+(async function init(){
+  const last = latest('Taxonomia');
+  if(last && Array.isArray(last.data) && last.data.length>0){
+    renderRows(last.data);
+    return;
+  }
+  try{
+    const r = await fetch('/dtp');
+    const d = await r.json();
+    renderRows(d.taxonomia || []);
+  }catch(e){
+    console.error(e);
+    renderRows([]);
+  }
+})();
+
+function renderRows(rows){
+  tbody.innerHTML='';
+  rows.forEach(item=>{
+    const tr=document.createElement('tr');
+    const atividade = item.atividade_dtp?.descricao || item.atividade_dtp || '';
+    tr.appendChild(cell(atividade,true));
+
+    const g=item.taxonomia_global||{};
+    const l=item.taxonomia_latam||{};
+    [g.L0,g.L1,g.L2,g.L3,g.L4,g.L5,l.L0,l.L1,l.L2,l.L3,l.L4,l.L5].forEach(v=>tr.appendChild(cell(v||'—')));
+
+    tr.appendChild(cell(item.status||'Pendente'));
+    tr.appendChild(cell(item.aprovador||''));
+    tr.appendChild(cell(item.data||''));
+
+    const act=document.createElement('td');
+    act.className='actions-col';
+    act.innerHTML=`<button onclick="editRow(this)">✏️</button><button onclick="deleteRow(this)">🗑️</button>`;
+    tr.appendChild(act);
+
+    tbody.appendChild(tr);
+  });
+}
+function cell(text,sticky=false){
+  const td=document.createElement('td');
+  td.textContent=text;
+  if(sticky) td.classList.add('sticky');
+  return td;
+}
+
+function editRow(btn){
+  const tr=btn.closest('tr');
+  tr.querySelectorAll('td').forEach(td=>{
+    if(td.classList.contains('actions-col')) return;
+    const v=td.textContent;
+    if(td.cellIndex===13){
+      td.innerHTML=`<select><option>Pendente</option><option>Aprovada</option><option>Recusada</option></select>`;
+      td.querySelector('select').value=v||'Pendente';
+    }else{
+      td.innerHTML=`<input value="${v}">`;
+    }
+  });
+  btn.textContent='✅';
+  btn.onclick=()=>saveRow(btn);
+}
+function saveRow(btn){
+  const tr=btn.closest('tr');
+  tr.querySelectorAll('td').forEach(td=>{
+    const input=td.querySelector('input,select');
+    if(input) td.textContent=input.value;
+  });
+  btn.textContent='✏️';
+  btn.onclick=()=>editRow(btn);
+}
+function deleteRow(btn){
+  if(confirm('Deseja remover esta linha?')) btn.closest('tr').remove();
+}
+
+function salvarTaxonomia(){
+  const data=[];
+  tbody.querySelectorAll('tr').forEach(tr=>{
+    const tds=tr.querySelectorAll('td');
+    data.push({
+      atividade_dtp: tds[0].textContent,
+      taxonomia_global:{L0:tds[1].textContent,L1:tds[2].textContent,L2:tds[3].textContent,L3:tds[4].textContent,L4:tds[5].textContent,L5:tds[6].textContent},
+      taxonomia_latam:{L0:tds[7].textContent,L1:tds[8].textContent,L2:tds[9].textContent,L3:tds[10].textContent,L4:tds[11].textContent,L5:tds[12].textContent},
+      status:tds[13].textContent,
+      aprovador:tds[14].textContent,
+      data:tds[15].textContent
+    });
+  });
+  saveVersion('Taxonomia','karla.gabriely.eloi',data);
+  alert('Versão da Taxonomia salva no histórico.');
+}
+</script>
+
+</body>
+</html>

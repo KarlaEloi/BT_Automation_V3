@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HLPM v3 – Portal BT</title>
+<style>
+  :root{--purple:#6a1b9a;--purple2:#7e57c2;--bg:#faf8ff;--card:#fff;--text:#1f1f1f;--muted:#5a5a5a;--shadow:0 10px 30px rgba(0,0,0,.08);--radius:14px;--navy:#0d2237}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Arial,sans-serif;background:linear-gradient(180deg,#fff 0%,var(--bg) 60%,#fff 100%);color:var(--text)}
+
+  /* ===== Header padrão (igual FMEA / Capacity) ===== */
+  .header{background:#6a1b9a;color:#fff;padding:12px 18px;border-radius:0}
+  .header h2{margin:0;font-size:20px}
+  .sub{margin-top:4px;font-size:13px;opacity:.95}
+
+  /* ===== Toolbar padrão ===== */
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 18px}
+  button{padding:7px 10px;border-radius:10px;border:1px solid #e6e2ff;background:#fff;font-weight:700;color:#3b1a5a;cursor:pointer}
+  button.primary{background:linear-gradient(90deg,var(--purple) 0%,var(--purple2) 100%);color:#fff;border-color:transparent}
+
+  main{padding:16px 18px 26px;max-width:1700px;margin:0 auto}
+
+  .status{margin:10px 0;padding:8px 10px;border:1px solid #ddd;background:#f7f7f7;border-radius:10px;font-size:12.5px}
+  .ok{border-color:#c8e6c9;background:#e8f5e9}
+  .err{border-color:#ffcdd2;background:#ffebee}
+
+  .flowWrap{border:1px solid #ddd;border-radius:14px;background:#fff;box-shadow:var(--shadow);padding:12px}
+  .flow{display:flex;gap:18px;overflow-x:auto;padding-bottom:8px;align-items:flex-start}
+  .stage{min-width:360px;position:relative}
+  .stage:not(:last-child)::after{content:'→';position:absolute;right:-18px;top:50%;transform:translateY(-50%);font-size:22px;color:var(--purple2);font-weight:900}
+
+  .stageHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+  .stageHead input{width:100%;border:1px solid #ddd;border-radius:10px;padding:8px;font-weight:800}
+  .stageHead button{padding:6px 8px;font-size:12px}
+
+  .block{border:1px solid #eee;border-radius:14px;box-shadow:var(--shadow);background:var(--card);padding:10px;margin-bottom:8px;display:flex;flex-direction:column;min-height:260px}
+  .blockTitle{margin:-10px -10px 8px -10px;padding:10px;border-radius:14px 14px 0 0;background:var(--navy);color:#fff;font-weight:900;letter-spacing:.6px;text-align:center;font-size:12px}
+
+  .vArrow{display:grid;place-items:center;color:var(--purple2);font-weight:900;margin:4px 0 6px;font-size:18px}
+
+  .list{display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto;padding-right:4px;flex:1}
+
+  .item{display:grid;grid-template-columns:1fr 26px;gap:6px;align-items:start}
+  .item textarea{width:100%;min-height:44px;resize:vertical;border:1px solid #d9d9d9;border-radius:10px;padding:8px;font-family:Arial,sans-serif;font-size:13px}
+  .item button{padding:2px 6px;border-radius:8px;border:1px solid #ccc;background:#fff;cursor:pointer;font-weight:900}
+
+  .smallBtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .smallBtns button{font-size:12px;padding:6px 8px}
+
+  .hint{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.35}
+
+  .footerNote{margin-top:14px;border-top:1px dashed #ddd;padding-top:10px;color:#666;font-size:12px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+
+  @media print{.toolbar{display:none!important}.footerNote{display:none}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h2>HLPM</h2>
+  <div class="sub">Portal BT • Piloto RTR • Accenture • Business Transformation</div>
+</div>
+
+<div class="toolbar">
+  <button class="primary" onclick="saveHLPM()">💾 Salvar</button>
+  <button onclick="goMenu()">🏠 Menu</button>
+  <button onclick="exportPDF()">🖨️ Salvar PDF</button>
+  <button onclick="exportExcel()">📊 Salvar Excel</button>
+  <button onclick="addStage()">➕ Incluir Etapa</button>
+  <button onclick="loadHLPM()">📥 Carregar</button>
+  <button onclick="clearHLPM()">🧹 Limpar</button>
+</div>
+
+<main>
+  <div id="status" class="status">Carregando HLPM (Inputs / Processo / Outputs) a partir do JSON…</div>
+
+  <div class="flowWrap">
+    <div class="flow" id="flow"></div>
+    <div class="hint">Blocos com altura fixa + scroll interno garantem alinhamento visual mesmo com muitos itens.</div>
+  </div>
+
+  <div class="footerNote">
+    <div><b>Origem:</b> /entradas • /atividades • /saidas</div>
+    <div><b>Layout:</b> Solução 1 + 2 (scroll interno + altura padronizada)</div>
+  </div>
+</main>
+
+<script>
+async function getJSON(endpoint){const r=await fetch(`/${endpoint}`,{cache:'no-store'});if(!r.ok) throw new Error(`HTTP ${r.status}`);return r.json();}
+function setStatus(ok,msg){const s=document.getElementById('status');s.className='status '+(ok?'ok':'err');s.textContent=msg;}
+
+let stages=[];
+
+init();
+async function init(){
+  try{
+    const [entradas, atividades, saidas] = await Promise.all([
+      getJSON('entradas'),
+      getJSON('atividades'),
+      getJSON('saidas')
+    ]);
+
+    const inputs = (entradas||[]).map(e=>e?.descricao||'').filter(x=>x.trim()!=='');
+    const outputs = (saidas||[]).map(s=>s?.descricao||'').filter(x=>x.trim()!=='');
+    const procs = (atividades||[]).map(a=>a?.descricao||'').filter(x=>x.trim()!=='');
+
+    stages = procs.map(d=>({title:d,inputs:[],process:[d],outputs:[]}));
+    if(stages.length){ stages[0].inputs=[...new Set(inputs)]; stages[stages.length-1].outputs=[...new Set(outputs)]; }
+
+    render();
+    setStatus(true,`HLPM v3 carregado • Etapas: ${stages.length}`);
+  }catch(e){
+    setStatus(false,'Erro ao carregar JSON. HLPM aberto para edição manual.');
+    stages=[{title:'Nova Etapa',inputs:[],process:[],outputs:[]}];
+    render();
+  }
+}
+
+function render(){const f=document.getElementById('flow');f.innerHTML='';stages.forEach((s,i)=>f.appendChild(stageCard(s,i)));}
+
+function stageCard(st,idx){
+  const d=document.createElement('div');d.className='stage';
+  const head=document.createElement('div');head.className='stageHead';
+  const t=document.createElement('input');t.value=st.title;t.oninput=()=>st.title=t.value;
+  const del=document.createElement('button');del.textContent='✕ Etapa';del.onclick=()=>{stages.splice(idx,1);render();};
+  head.appendChild(t);head.appendChild(del);d.appendChild(head);
+
+  d.appendChild(block('OUTPUT',st.outputs));d.appendChild(vArrow());
+  d.appendChild(block('PROCESSO (ATIVIDADES)',st.process));d.appendChild(vArrow());
+  d.appendChild(block('INPUT',st.inputs));
+
+  return d;
+}
+
+function vArrow(){const a=document.createElement('div');a.className='vArrow';a.textContent='↑';return a;}
+
+function block(title,arr){
+  const b=document.createElement('div');b.className='block';
+  const h=document.createElement('div');h.className='blockTitle';h.textContent=title;b.appendChild(h);
+  const list=document.createElement('div');list.className='list';
+  if(!arr.length) arr.push('');
+  arr.forEach((v,i)=>list.appendChild(item(arr,i)));
+  b.appendChild(list);
+  const btns=document.createElement('div');btns.className='smallBtns';
+  const add=document.createElement('button');add.textContent='➕ Item';add.onclick=()=>{arr.push('');render();};
+  btns.appendChild(add);b.appendChild(btns);
+  return b;
+}
+
+function item(arr,i){
+  const w=document.createElement('div');w.className='item';
+  const ta=document.createElement('textarea');ta.value=arr[i];ta.oninput=()=>arr[i]=ta.value;
+  const del=document.createElement('button');del.textContent='✕';del.onclick=()=>{arr.splice(i,1);render();};
+  w.appendChild(ta);w.appendChild(del);return w;
+}
+
+function addStage(){stages.push({title:'Nova Etapa',inputs:[],process:[],outputs:[]});render();}
+function saveHLPM(){localStorage.setItem('hlpm_v3_state',JSON.stringify(stages));alert('HLPM v3 salvo.');}
+function loadHLPM(){const r=localStorage.getItem('hlpm_v3_state');if(!r){alert('Nada salvo.');return;}stages=JSON.parse(r);render();}
+function clearHLPM(){localStorage.removeItem('hlpm_v3_state');stages=[];render();}
+function goMenu(){window.location.href='/';}
+function exportPDF(){window.print();}
+function exportExcel(){const html=document.documentElement.outerHTML;const blob=new Blob([html],{type:'application/vnd.ms-excel'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='hlpm.xls';a.click();}
+</script>
+
+<script>
+
+// ===== BT ONE History (localStorage) =====
+const BTONE_HISTORY_KEY = 'BT_ONE_HISTORY';
+function btone_readStore(){ return JSON.parse(localStorage.getItem(BTONE_HISTORY_KEY) || '{}'); }
+function btone_writeStore(store){ localStorage.setItem(BTONE_HISTORY_KEY, JSON.stringify(store)); }
+function btone_latest(tool){ const s=btone_readStore(); const a=s[tool]||[]; return a[a.length-1]||null; }
+function btone_saveVersion(tool, user, data){
+  const now = new Date();
+  const ymd = now.toISOString().slice(0,10).replace(/-/g,'');
+  const entry = { id: `${tool}_${user}_${ymd}`, tool, user, date: now.toLocaleString(), data };
+  const store = btone_readStore();
+  store[tool] = store[tool] || [];
+  store[tool].push(entry);
+  btone_writeStore(store);
+}
+
+(function(){
+  const TOOL = "HLPM";
+  const USER = "karla.gabriely.eloi";
+
+  // Auto-carregar última versão salva
+  window.addEventListener('DOMContentLoaded', ()=>{
+    try{
+      const last = btone_latest(TOOL);
+      if(last && last.data){
+        localStorage.setItem("hlpm_v3_state", JSON.stringify(last.data));
+        if(typeof window["loadHLPM"] === 'function'){
+          window["loadHLPM"]();
+        }
+      }
+    }catch(e){ console.warn('BT ONE history load failed', e); }
+  });
+
+  // Patch do salvar: salva como antes + grava no histórico
+  const __origSave = window["saveHLPM"];
+  if(typeof __origSave === 'function'){
+    window["saveHLPM"] = function(){
+      const ret = __origSave.apply(this, arguments);
+      try{
+        const raw = localStorage.getItem("hlpm_v3_state");
+        const data = raw ? JSON.parse(raw) : null;
+        btone_saveVersion(TOOL, USER, data);
+      }catch(e){ console.warn('BT ONE history save failed', e); }
+      return ret;
+    };
+  }
+})();
+</script>
+
+</body>
+</html>

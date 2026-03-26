@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BT ONE | Business Transformation Operations & Insights Engine</title>
+<style>
+:root{--accenture-purple:#6a1b9a;--accenture-purple-2:#7e57c2;--accenture-lav:#ede7f6;--bg:#0e1024;--card-border:#262a55;--text:#ffffff;--muted:#b9b9d6}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:radial-gradient(circle at top,#1b1f4b,#0e1024 60%);color:var(--text)}
+header{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;background:linear-gradient(90deg,var(--accenture-purple),var(--accenture-purple-2))}
+header h1{margin:0;font-size:22px}header span{font-size:12px;opacity:.9}
+.container{display:flex}
+aside{width:260px;background:#12143a;padding:18px;border-right:1px solid #262a55}
+aside h3{margin-top:0;font-size:14px;color:#c7c7ff}label{font-size:12px;color:#c7c7ff}
+select{width:100%;margin-top:6px;margin-bottom:14px;padding:8px;border-radius:8px;border:1px solid #262a55;background:#1a1d4f;color:#fff}
+main{flex:1;padding:28px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:22px}
+.card{background:linear-gradient(145deg,#1b1f4b,#15183a);border:1px solid var(--card-border);border-radius:18px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;min-height:160px}
+.card h4{margin:0 0 6px 0}.card p{font-size:12px;color:var(--muted);margin:0}
+.badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;background:#2c3170;color:#fff;margin-bottom:8px;width:max-content}
+.actions{display:flex;gap:8px;margin-top:14px}
+.actions button{flex:1;padding:8px;border-radius:10px;border:none;font-size:12px;font-weight:700;cursor:pointer}
+.open{background:linear-gradient(90deg,var(--accenture-purple),var(--accenture-purple-2));color:#fff}
+.insight{background:var(--accenture-lav);color:#3b1a5a;border:1px solid #d1c4e9}
+.disabled{background:#333;color:#888;cursor:not-allowed}
+footer{text-align:center;font-size:11px;color:#aaa;margin-top:40px}
+</style>
+</head>
+<body>
+<header>
+ <div>
+ <h1>BT ONE</h1>
+ <span>Business Transformation – Operations & Insights Engine</span>
+ </div>
+ <span>Accenture • Business Transformation</span>
+</header>
+<div class="container">
+ <aside>
+ <h3>Contexto</h3>
+ <label>Cliente</label>
+ <select><option>Oncoclínicas</option></select>
+ <label>Processo</label>
+ <select><option>RTR</option></select>
+ </aside>
+ <main>
+ <div class="grid">
+ <div class="card"><h4>Taxonomia</h4><p>Classificação e padronização das atividades.</p><div class="actions"><button class="open" onclick="location.href='taxonomia.html'">Abrir</button><button class="insight" onclick="alert('Insights da Taxonomia: em breve.');">Insights</button></div></div>
+ <div class="card"><h4>Curva Z</h4><p>Priorização por esforço, volume e risco.</p><div class="actions"><button class="open" onclick="location.href='curva_z.html'">Abrir</button><button class="insight" onclick="alert('Insights da Curva Z: em breve.');">Insights</button></div></div>
+ <div class="card"><h4>HLPM</h4><p>Mapa de processo de alto nível.</p><div class="actions"><button class="open" onclick="location.href='hlpm.html'">Abrir</button><button class="insight" onclick="alert('Insights do HLPM: em breve.');">Insights</button></div></div>
+ <div class="card"><h4>SIPOC</h4><p>Suppliers, Inputs, Process, Outputs, Customers.</p><div class="actions"><button class="open" onclick="location.href='sipoc.html'">Abrir</button><button class="insight" onclick="alert('Insights do SIPOC: em breve.');">Insights</button></div></div>
+ <div class="card"><h4>Capacity</h4><p>Dimensionamento de capacidade.</p><div class="actions"><button class="open" onclick="location.href='capacity.html'">Abrir</button><button class="insight" onclick="location.href='capacity_insights.html'">Insights</button></div></div>
+ <div class="card"><h4>Skill Matrix</h4><p>Competências e gaps.</p><div class="actions"><button class="open" onclick="location.href='skill.html?v=2'">Abrir</button><button class="insight" onclick="alert('Insights da Skill Matrix: em breve.');">Insights</button></div></div>
+ <div class="card"><h4>FMEA</h4><p>Riscos, severidade e ações.</p><div class="actions"><button class="open" onclick="location.href='fmea.html'">Abrir</button><button class="insight" onclick="location.href='fmea_insights.html'">Insights</button></div></div>
+ <div class="card"><span class="badge">Em breve</span><h4>Check de Qualidade</h4><p>Roadmap V3.</p><div class="actions"><button class="disabled">Em breve</button><button class="disabled">Insights</button></div></div>
+ <div class="card"><span class="badge">Em breve</span><h4>Fhinck</h4><p>Roadmap V3.</p><div class="actions"><button class="disabled">Em breve</button><button class="disabled">Insights</button></div></div>
+ <div class="card"><span class="badge">Em breve</span><h4>IW</h4><p>Roadmap V3.</p><div class="actions"><button class="disabled">Em breve</button><button class="disabled">Insights</button></div></div>
+ <div class="card"><span class="badge">Governança</span><h4>📁 Acessar Histórico</h4><p>Versões salvas • Auditoria • Evolução.</p><div class="actions"><button class="open" onclick="location.href='/history.html'">Abrir</button></div></div>
+ <div class="card"><span class="badge">Em breve</span><h4>📊 Insights Consolidados</h4><p>Visão integrada, comparativa e dashboards entre processos.</p><div class="actions"><button class="disabled">Em breve</button></div></div>
+ </div>
+ <footer>BT ONE • V2 • Portal interno de Business Transformation</footer>
+ </main>
+</div>
+</body>
+</html>

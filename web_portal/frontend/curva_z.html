@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Z‑Curve – Portal BT</title>
+
+<style>
+  :root{
+    --purple:#6a1b9a;
+    --purple2:#7e57c2;
+    --navy:#0d2237;
+    --bg:#faf8ff;
+    --card:#fff;
+    --text:#1f1f1f;
+    --muted:#5a5a5a;
+    --shadow:0 10px 30px rgba(0,0,0,.08);
+    --radius:14px
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Arial,sans-serif;background:linear-gradient(180deg,#fff 0%,var(--bg) 60%,#fff 100%);color:var(--text)}
+
+  .header{background:#6a1b9a;color:#fff;padding:12px 18px}
+  .header h2{margin:0;font-size:20px}
+  .sub{margin-top:4px;font-size:13px;opacity:.95}
+
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 18px}
+  button{padding:7px 10px;border-radius:10px;border:1px solid #e6e2ff;background:#fff;font-weight:700;color:#3b1a5a;cursor:pointer}
+  button.primary{background:linear-gradient(90deg,var(--purple) 0%,var(--purple2) 100%);color:#fff;border-color:transparent}
+
+  main{padding:16px 18px 26px;max-width:2200px;margin:0 auto}
+
+  .status{margin:10px 0;padding:8px 10px;border:1px solid #ddd;background:#f7f7f7;border-radius:10px;font-size:12.5px}
+  .ok{border-color:#c8e6c9;background:#e8f5e9}
+  .err{border-color:#ffcdd2;background:#ffebee}
+
+  .canvas{position:relative;border:1px solid #ddd;border-radius:14px;background:#fff;box-shadow:var(--shadow);padding:16px;overflow-x:auto}
+  .row{display:flex;align-items:flex-start;gap:24px;min-width:1800px}
+
+  svg{position:absolute;top:120px;left:0;width:2400px;height:120px;pointer-events:none}
+
+  /* 🔹 CARD MAIS LARGO PARA TÍTULO LONGO */
+  .step{position:relative;z-index:2;width:420px}
+
+  .card{background:var(--card);border:1px solid #eee;border-radius:14px;box-shadow:var(--shadow);padding:10px;display:flex;flex-direction:column}
+
+  /* 🔹 TÍTULO NÃO CORTA MAIS */
+  .title{
+    background:var(--navy);
+    color:#fff;
+    padding:10px;
+    border-radius:10px;
+    font-weight:800;
+    font-size:13px;
+    line-height:1.3;
+    text-align:center;
+    margin-bottom:8px;
+    white-space:normal;      /* permite quebrar linha */
+    overflow:visible;        /* não corta texto */
+  }
+
+  .desc{display:flex;flex-direction:column;gap:10px}
+  .desc textarea{width:100%;min-height:110px;resize:vertical;border:1px solid #d9d9d9;border-radius:10px;padding:10px;font-size:13px;line-height:1.4}
+
+  .smallBtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .smallBtns button{font-size:12px;padding:6px 8px}
+
+  .insertBtn{text-align:center;margin-top:6px}
+  .insertBtn button{font-size:12px;padding:6px 10px}
+
+  .legend{margin-top:14px;display:flex;gap:14px;flex-wrap:wrap;font-size:12px}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
+  .fte{background:#7e57c2}.asset{background:#00acc1}.client{background:#ab47bc}
+
+  @media print{.toolbar{display:none!important}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h2>Z‑Curve</h2>
+  <div class="sub">Portal BT • Piloto RTR • Accenture • Business Transformation</div>
+</div>
+
+<div class="toolbar">
+  <button class="primary" onclick="saveZ()">💾 Salvar</button>
+  <button onclick="goMenu()">🏠 Menu</button>
+  <button onclick="exportPDF()">🖨️ Salvar PDF</button>
+  <button onclick="exportExcel()">📊 Salvar Excel</button>
+  <button onclick="addStep()">➕ Incluir Etapa</button>
+  <button onclick="loadZ()">📥 Carregar</button>
+  <button onclick="clearZ()">🧹 Limpar</button>
+</div>
+
+<main>
+  <div id="status" class="status">Carregando Z‑Curve…</div>
+
+  <div class="canvas">
+    <svg viewBox="0 0 2400 120" preserveAspectRatio="none">
+      <path d="M40 60 H2360" stroke="#6a1b9a" stroke-width="6" fill="none"/>
+      <defs>
+        <marker id="arrow" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L9,3 z" fill="#6a1b9a"/>
+        </marker>
+      </defs>
+      <path d="M40 60 H2360" stroke="#6a1b9a" stroke-width="6" marker-end="url(#arrow)" fill="none"/>
+    </svg>
+    <div class="row" id="row"></div>
+  </div>
+
+  <div class="legend">
+    <span><span class="dot fte"></span>Accenture FTE</span>
+    <span><span class="dot asset"></span>Accenture Asset</span>
+    <span><span class="dot client"></span>Cliente</span>
+  </div>
+</main>
+
+<script>
+async function getJSON(endpoint){const r=await fetch(`/${endpoint}`,{cache:'no-store'});if(!r.ok) throw new Error(r.status);return r.json();}
+function setStatus(ok,msg){const s=document.getElementById('status');s.className='status '+(ok?'ok':'err');s.textContent=msg;}
+
+let steps=[];
+init();
+async function init(){
+  try{
+    const dtp = await getJSON('dtp');
+    const atividades = dtp.atividades || [];
+    const sistemas   = dtp.sistemas || [];
+    const controles  = dtp.controles || [];
+
+    steps = atividades.map((a,idx)=>({
+      title: a.descricao || 'Etapa',
+      description: `${sistemas[0]?.nome || ''} - ${controles[idx]?.descricao || ''}`.trim()
+    }));
+    render();
+    setStatus(true,`Z‑Curve carregada • Etapas: ${steps.length}`);
+  }catch(e){setStatus(false,'Erro ao carregar JSON.');steps=[{title:'Nova Etapa',description:''}];render();}
+}
+function render(){const row=document.getElementById('row');row.innerHTML='';steps.forEach((s,i)=>row.appendChild(stepCard(s,i)));}
+function stepCard(st,idx){
+  const w=document.createElement('div');w.className='step';
+  const c=document.createElement('div');c.className='card';
+  const t=document.createElement('div');t.className='title';t.textContent=st.title;c.appendChild(t);
+  const d=document.createElement('div');d.className='desc';
+  const ta=document.createElement('textarea');ta.value=st.description;ta.oninput=()=>st.description=ta.value;d.appendChild(ta);c.appendChild(d);
+  const btns=document.createElement('div');btns.className='smallBtns';
+  const del=document.createElement('button');del.textContent='✕ Etapa';del.onclick=()=>{steps.splice(idx,1);render();};btns.appendChild(del);c.appendChild(btns);
+  const insert=document.createElement('div');insert.className='insertBtn';
+  const ib=document.createElement('button');ib.textContent='➕ Inserir etapa aqui';ib.onclick=()=>{steps.splice(idx+1,0,{title:'Nova Etapa',description:''});render();};insert.appendChild(ib);
+  w.appendChild(c);w.appendChild(insert);return w;
+}
+function addStep(){steps.push({title:'Nova Etapa',description:''});render();}
+function saveZ(){localStorage.setItem('zcurve_single_desc',JSON.stringify(steps));alert('Z‑Curve salva.');}
+function loadZ(){const r=localStorage.getItem('zcurve_single_desc');if(!r){alert('Nada salvo.');return;}steps=JSON.parse(r);render();}
+function clearZ(){localStorage.removeItem('zcurve_single_desc');steps=[];render();}
+function goMenu(){window.location.href='/';}
+function exportPDF(){window.print();}
+function exportExcel(){const html=document.documentElement.outerHTML;const blob=new Blob([html],{type:'application/vnd.ms-excel'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='curva_z.xls';a.click();}
+</script>
+
+
+<script>
+
+// ===== BT ONE History (localStorage) =====
+const BTONE_HISTORY_KEY = 'BT_ONE_HISTORY';
+function btone_readStore(){ return JSON.parse(localStorage.getItem(BTONE_HISTORY_KEY) || '{}'); }
+function btone_writeStore(store){ localStorage.setItem(BTONE_HISTORY_KEY, JSON.stringify(store)); }
+function btone_latest(tool){ const s=btone_readStore(); const a=s[tool]||[]; return a[a.length-1]||null; }
+function btone_saveVersion(tool, user, data){
+  const now = new Date();
+  const ymd = now.toISOString().slice(0,10).replace(/-/g,'');
+  const entry = { id: `${tool}_${user}_${ymd}`, tool, user, date: now.toLocaleString(), data };
+  const store = btone_readStore();
+  store[tool] = store[tool] || [];
+  store[tool].push(entry);
+  btone_writeStore(store);
+}
+
+(function(){
+  const TOOL = "Curva Z";
+  const USER = "karla.gabriely.eloi";
+
+  window.addEventListener('DOMContentLoaded', ()=>{
+    try{
+      const last = btone_latest(TOOL);
+      if(last && last.data){
+        localStorage.setItem("zcurve_single_desc", JSON.stringify(last.data));
+        if(typeof window.loadZ === 'function') window.loadZ();
+      }
+    }catch(e){ console.warn('BT ONE history load failed', e); }
+  });
+
+  const __origSave = window.saveZ;
+  if(typeof __origSave === 'function'){
+    window.saveZ = function(){
+      const ret = __origSave.apply(this, arguments);
+      try{
+        const raw = localStorage.getItem("zcurve_single_desc");
+        const data = raw ? JSON.parse(raw) : null;
+        btone_saveVersion(TOOL, USER, data);
+      }catch(e){ console.warn('BT ONE history save failed', e); }
+      return ret;
+    };
+  }
+})();
+</script>
+
+</body>
+</html>

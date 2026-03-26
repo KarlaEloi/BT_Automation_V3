@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SIPOC – Portal BT</title>
+<style>
+  :root{--purple:#6a1b9a;--purple2:#7e57c2;--lav:#ede7f6;--bg:#faf8ff;--card:#fff;--text:#1f1f1f;--muted:#5a5a5a;--shadow:0 10px 30px rgba(0,0,0,.08);--radius:14px}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Arial,sans-serif;background:linear-gradient(180deg,#fff 0%,var(--bg) 60%,#fff 100%);color:var(--text)}
+
+  /* ===== Header padrão (igual FMEA / Capacity) ===== */
+  .header{background:#6a1b9a;color:#fff;padding:12px 18px;border-radius:0}
+  .header h2{margin:0;font-size:20px}
+  .sub{margin-top:4px;font-size:13px;opacity:.95}
+
+  /* ===== Toolbar padrão ===== */
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 18px}
+  button{padding:7px 10px;border-radius:10px;border:1px solid #e6e2ff;background:#fff;font-weight:700;color:#3b1a5a;cursor:pointer}
+  button.primary{background:linear-gradient(90deg,var(--purple) 0%,var(--purple2) 100%);color:#fff;border-color:transparent}
+
+  main{padding:16px 18px 26px;max-width:1400px;margin:0 auto}
+
+  .status{margin:10px 0;padding:8px 10px;border:1px solid #ddd;background:#f7f7f7;border-radius:10px;font-size:12.5px}
+  .ok{border-color:#c8e6c9;background:#e8f5e9}
+  .err{border-color:#ffcdd2;background:#ffebee}
+
+  /* SIPOC cards */
+  .sipocRow{display:grid;grid-template-columns:repeat(5,minmax(210px,1fr));gap:14px;align-items:stretch}
+  .card{background:var(--card);border:1px solid #eee;border-radius:var(--radius);box-shadow:var(--shadow);padding:12px;position:relative;min-height:360px}
+  .cardHeader{margin:-12px -12px 10px -12px;padding:12px;border-radius:var(--radius) var(--radius) 0 0;background:#0d2237;color:#fff;font-weight:800;letter-spacing:.6px}
+
+  .card:not(:last-child)::after{content:"→";position:absolute;right:-18px;top:50%;transform:translateY(-50%);font-size:22px;color:#7e57c2;font-weight:900}
+
+  .list{display:flex;flex-direction:column;gap:8px;max-height:270px;overflow:auto;padding-right:4px}
+  .item{display:grid;grid-template-columns:1fr 26px;gap:6px;align-items:start}
+  .item textarea{width:100%;min-height:44px;resize:vertical;border:1px solid #d9d9d9;border-radius:10px;padding:8px;font-family:Arial,sans-serif;font-size:13px}
+  .item button{padding:2px 6px;border-radius:8px;border:1px solid #ccc;background:#fff;cursor:pointer;font-weight:900}
+
+  .smallBtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .smallBtns button{font-size:12px;padding:6px 8px}
+
+  .hint{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.35}
+
+  .footerNote{margin-top:14px;border-top:1px dashed #ddd;padding-top:10px;color:#666;font-size:12px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+
+  @media print{.toolbar{display:none!important}.footerNote{display:none}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h2>SIPOC</h2>
+  <div class="sub">Portal BT • Piloto RTR • Accenture • Business Transformation</div>
+</div>
+
+<div class="toolbar">
+  <button class="primary" onclick="saveSipoc()">💾 Salvar</button>
+  <button onclick="goMenu()">🏠 Menu</button>
+  <button onclick="exportPDF()">🖨️ Salvar PDF</button>
+  <button onclick="exportExcel()">📊 Salvar Excel</button>
+  <button onclick="addProcessStep()">➕ Incluir Etapa (Processo)</button>
+  <button onclick="loadSipoc()">📥 Carregar</button>
+  <button onclick="clearSipoc()">🧹 Limpar</button>
+</div>
+
+<main>
+  <div id="status" class="status">Carregando SIPOC a partir do JSON…</div>
+
+  <section class="sipocRow">
+    <div class="card"><div class="cardHeader">SUPPLIERS</div><div class="list" id="suppliersList"></div><div class="smallBtns"><button onclick="addItem('suppliers')">➕ Item</button></div></div>
+    <div class="card"><div class="cardHeader">INPUTS</div><div class="list" id="inputsList"></div><div class="smallBtns"><button onclick="addItem('inputs')">➕ Item</button></div></div>
+    <div class="card"><div class="cardHeader">PROCESSO</div><div class="list" id="processList"></div><div class="smallBtns"><button onclick="addProcessStep()">➕ Etapa</button></div><div class="hint">Dica: cada etapa é editável.</div></div>
+    <div class="card"><div class="cardHeader">OUTPUTS</div><div class="list" id="outputsList"></div><div class="smallBtns"><button onclick="addItem('outputs')">➕ Item</button></div></div>
+    <div class="card"><div class="cardHeader">CUSTOMERS</div><div class="list" id="customersList"></div><div class="smallBtns"><button onclick="addItem('customers')">➕ Item</button></div><div class="hint">Customers não veio no JSON (normal).</div></div>
+  </section>
+
+  <div class="footerNote"><div><b>Como editar:</b> clique no texto, altere. Use “✕” para remover itens.</div><div><b>Origem:</b> /entradas, /atividades, /saidas</div></div>
+</main>
+
+<script>
+async function getJSON(endpoint){const r=await fetch(`/${endpoint}`,{cache:'no-store'});if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json();}
+function setStatus(ok,msg){const s=document.getElementById('status');s.className='status '+(ok?'ok':'err');s.textContent=msg;}
+let state={suppliers:[],inputs:[],process:[],outputs:[],customers:[]};
+init();
+async function init(){try{const[e,a,s]=await Promise.all([getJSON('entradas'),getJSON('atividades'),getJSON('saidas')]);state.suppliers=[...new Set((e||[]).map(x=>x?.localizacao||x?.origem||'').filter(x=>x))];state.inputs=[...new Set((e||[]).map(x=>x?.descricao||'').filter(x=>x))];state.process=(a||[]).map(x=>x?.descricao||'').filter(x=>x);state.outputs=[...new Set((s||[]).map(x=>x?.descricao||'').filter(x=>x))];renderAll();setStatus(true,'SIPOC carregado do JSON');}catch(err){setStatus(false,'Erro ao carregar SIPOC');renderAll();}}
+function renderAll(){['suppliers','inputs','process','outputs','customers'].forEach(renderList);}
+function renderList(k){const el=document.getElementById(k+'List');el.innerHTML='';(state[k].length?state[k]:['']).forEach((v,i)=>el.appendChild(makeItem(k,i,v)));}
+function makeItem(k,i,v){const w=document.createElement('div');w.className='item';const t=document.createElement('textarea');t.value=v;t.oninput=()=>state[k][i]=t.value;const b=document.createElement('button');b.textContent='✕';b.onclick=()=>{state[k].splice(i,1);renderList(k)};w.appendChild(t);w.appendChild(b);return w;}
+function addItem(k){state[k].push('');renderList(k);}function addProcessStep(){addItem('process');}
+function saveSipoc(){localStorage.setItem('sipoc_state',JSON.stringify(state));alert('SIPOC salvo');}
+function loadSipoc(){const r=localStorage.getItem('sipoc_state');if(!r)return alert('Nada salvo');state=JSON.parse(r);renderAll();}
+function clearSipoc(){localStorage.removeItem('sipoc_state');state={suppliers:[],inputs:[],process:[],outputs:[],customers:[]};renderAll();}
+function goMenu(){window.location.href='/';}
+function exportPDF(){window.print();}
+function exportExcel(){const html=document.documentElement.outerHTML;const blob=new Blob([html],{type:'application/vnd.ms-excel'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sipoc.xls';a.click();}
+</script>
+
+<script>
+
+// ===== BT ONE History (localStorage) =====
+const BTONE_HISTORY_KEY = 'BT_ONE_HISTORY';
+function btone_readStore(){ return JSON.parse(localStorage.getItem(BTONE_HISTORY_KEY) || '{}'); }
+function btone_writeStore(store){ localStorage.setItem(BTONE_HISTORY_KEY, JSON.stringify(store)); }
+function btone_latest(tool){ const s=btone_readStore(); const a=s[tool]||[]; return a[a.length-1]||null; }
+function btone_saveVersion(tool, user, data){
+  const now = new Date();
+  const ymd = now.toISOString().slice(0,10).replace(/-/g,'');
+  const entry = { id: `${tool}_${user}_${ymd}`, tool, user, date: now.toLocaleString(), data };
+  const store = btone_readStore();
+  store[tool] = store[tool] || [];
+  store[tool].push(entry);
+  btone_writeStore(store);
+}
+
+(function(){
+  const TOOL = "SIPOC";
+  const USER = "karla.gabriely.eloi";
+
+  // Auto-carregar última versão salva
+  window.addEventListener('DOMContentLoaded', ()=>{
+    try{
+      const last = btone_latest(TOOL);
+      if(last && last.data){
+        localStorage.setItem("sipoc_state", JSON.stringify(last.data));
+        if(typeof window["loadSipoc"] === 'function'){
+          window["loadSipoc"]();
+        }
+      }
+    }catch(e){ console.warn('BT ONE history load failed', e); }
+  });
+
+  // Patch do salvar: salva como antes + grava no histórico
+  const __origSave = window["saveSipoc"];
+  if(typeof __origSave === 'function'){
+    window["saveSipoc"] = function(){
+      const ret = __origSave.apply(this, arguments);
+      try{
+        const raw = localStorage.getItem("sipoc_state");
+        const data = raw ? JSON.parse(raw) : null;
+        btone_saveVersion(TOOL, USER, data);
+      }catch(e){ console.warn('BT ONE history save failed', e); }
+      return ret;
+    };
+  }
+})();
+</script>
+
+</body>
+</html>

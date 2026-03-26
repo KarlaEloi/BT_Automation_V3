@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Capacity • Insights Executivos </title>
+  <style>
+    :root{
+      --purple:#6a1b9a;--purple2:#7e57c2;--bg:#0e1024;--card:#15183a;--card2:#1b1f4b;--border:#262a55;
+      --text:#fff;--muted:#b9b9d6;--good:#00c853;--ok:#43a047;--warn:#ffb300;--bad:#ff5252;
+      --cNeed:#7e57c2; --cAtual:#ede7f6; --cContr:#00acc1; --cOut:#00acc1; --cPerda:#ffb300; --cPct:#ab47bc;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,sans-serif;background:radial-gradient(circle at top,#1b1f4b,#0e1024 60%);color:var(--text)}
+    header{padding:16px 22px;background:linear-gradient(90deg,var(--purple),var(--purple2));display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+    header h1{margin:0;font-size:18px}
+    header .sub{font-size:12px;opacity:.95}
+    main{padding:18px 22px;max-width:1600px;margin:0 auto}
+
+    .topActions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+    button{border:none;border-radius:10px;padding:8px 12px;font-weight:800;cursor:pointer}
+    .btnPrimary{background:var(--purple);color:#fff}
+    .btnLight{background:#eee;color:#222}
+
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+    .card{background:linear-gradient(145deg,var(--card2),var(--card));border:1px solid var(--border);border-radius:16px;padding:14px}
+    .span3{grid-column:span 3}
+    .span6{grid-column:span 6}
+    .span12{grid-column:span 12}
+
+    .kpiLabel{font-size:11px;color:var(--muted);letter-spacing:.4px;text-transform:uppercase}
+    .kpiValue{font-size:24px;font-weight:900;margin-top:4px}
+    .status{font-weight:900;font-size:18px}
+    .exec{line-height:1.6}
+    .muted{color:var(--muted)}
+
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .mini{background:rgba(0,0,0,.15);border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:12px}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .stat{flex:1;min-width:200px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:10px}
+
+    .bar{height:10px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden}
+    .bar>div{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--purple),var(--purple2))}
+
+    .legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;color:var(--muted);font-size:12px}
+    .lg{display:flex;align-items:center;gap:6px}
+    .dot{width:10px;height:10px;border-radius:50%}
+
+    .chartBox{margin-top:8px}
+
+    @media(max-width:1200px){.split{grid-template-columns:1fr}}
+    @media(max-width:1000px){.span3,.span6{grid-column:span 12}}
+    @media print{.topActions{display:none!important} body{background:#fff;color:#111} .card{background:#fff;color:#111;border:1px solid #ddd}}
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Capacity • Insights Executivos </h1>
+    <div class="sub"> </div>
+  </div>
+  <div class="kpiLabel" id="refHeader">Ref.: —</div>
+</header>
+
+<main>
+  <div class="topActions">
+    <button class="btnPrimary" onclick="location.href='capacity.html'">✏️ Voltar para edição</button>
+    <button class="btnLight" onclick="location.href='/'">🏠 Menu</button>
+    <button class="btnLight" onclick="window.print()">🖨️ Exportar PDF</button>
+  </div>
+
+  <div id="empty" class="card" style="display:none">Nenhuma versão encontrada no histórico.</div>
+
+  <div id="root" style="display:none">
+    <div class="grid">
+      <!-- KPIs -->
+      <div class="card span3"><div class="kpiLabel">Cobertura</div><div class="kpiValue" id="kpiCob">—</div></div>
+      <div class="card span3"><div class="kpiLabel">FTE Atual</div><div class="kpiValue" id="kpiAt">—</div></div>
+      <div class="card span3"><div class="kpiLabel">FTE Necessário</div><div class="kpiValue" id="kpiNe">—</div></div>
+      <div class="card span3"><div class="kpiLabel">Gap</div><div class="kpiValue" id="kpiGap">—</div></div>
+
+      <div class="card span12"><div class="kpiLabel">Status Executivo</div><div id="kpiStatus" class="status">—</div></div>
+
+      <!-- Histórico global: linhas comparativas (SVG real) -->
+      <div class="card span12">
+        <div class="kpiLabel">Histórico (linhas comparativas) • FTE Necessário x FTE Atual</div>
+        <div id="chartGlobal" class="chartBox"></div>
+      </div>
+
+      <div class="card span12"><div class="kpiLabel">Resumo Executivo</div><div id="execTxt" class="exec"></div></div>
+
+      <!-- Contratuais -->
+      <div class="card span12">
+        <div class="kpiLabel">Atividades Contratuais</div>
+        <div class="split">
+          <div class="mini">
+            <div class="row">
+              <div class="stat"><div class="kpiLabel">Qtd. atividades</div><div class="kpiValue" id="cQtd">—</div></div>
+              <div class="stat"><div class="kpiLabel">FTE Contratuais</div><div class="kpiValue" id="cFte">—</div></div>
+            </div>
+            <div class="kpiLabel" style="margin-top:10px">Top atividades (FTE)</div>
+            <div id="cBars"></div>
+          </div>
+          <div class="mini">
+            <div class="kpiLabel">Histórico (linha) • FTE Contratuais</div>
+            <div id="chartContr" class="chartBox"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Outras -->
+      <div class="card span12">
+        <div class="kpiLabel">Outras Atividades</div>
+        <div class="split">
+          <div class="mini">
+            <div class="row">
+              <div class="stat"><div class="kpiLabel">FTE Outras</div><div class="kpiValue" id="oFte">—</div></div>
+              <div class="stat"><div class="kpiLabel">% FTE Base</div><div class="kpiValue" id="oPct">—</div></div>
+            </div>
+            <div class="kpiLabel" style="margin-top:10px">Itens (FTE)</div>
+            <div id="oBars"></div>
+          </div>
+          <div class="mini">
+            <div class="kpiLabel">Histórico (linha) • FTE Outras</div>
+            <div id="chartOut" class="chartBox"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Perdas -->
+      <div class="card span12">
+        <div class="kpiLabel">Perdas Diárias</div>
+        <div class="split">
+          <div class="mini">
+            <div class="row">
+              <div class="stat"><div class="kpiLabel">Min/mês</div><div class="kpiValue" id="pTot">—</div></div>
+              <div class="stat"><div class="kpiLabel">% Tempo</div><div class="kpiValue" id="pPct">—</div></div>
+            </div>
+            <div class="kpiLabel" style="margin-top:10px">Distribuição</div>
+            <div id="pBars"></div>
+          </div>
+          <div class="mini">
+            <div class="kpiLabel">Histórico (linhas) • Perdas (min) e %</div>
+            <div id="chartPerdas" class="chartBox"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script>
+const HISTORY_KEY='BT_ONE_HISTORY';
+
+function read(){
+  try{return JSON.parse(localStorage.getItem(HISTORY_KEY)||'{}')}catch(e){return {}}
+}
+
+function safeNum(x){
+  const n = Number(String(x ?? '').replace(',','.'));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function fmt(n,d=3){return Number.isFinite(n)?n.toFixed(d).replace('.',','):'—'}
+function fmtInt(n){return Number.isFinite(n)?String(Math.round(n)):'—'}
+function pct(n,d=1){return Number.isFinite(n)?(n*100).toFixed(d).replace('.',',')+'%':'—'}
+
+function renderBars(items, valKey, labelKey, fmtFn){
+  const valid = items.filter(x=>Number.isFinite(x[valKey]) && x[valKey] > 0);
+  if(!valid.length) return '<div class="muted">Sem dados suficientes para exibir.</div>';
+  const max = Math.max(...valid.map(x=>x[valKey]));
+  return valid.sort((a,b)=>b[valKey]-a[valKey]).slice(0,5).map(x=>{
+    const w = max>0 ? (x[valKey]/max)*100 : 0;
+    return `<div style="margin:10px 0">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">
+        <div style="font-weight:800">${escapeHtml(x[labelKey])}</div>
+        <div class="muted">${fmtFn(x[valKey])}</div>
+      </div>
+      <div class="bar"><div style="width:${w.toFixed(1)}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function escapeHtml(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function lineChartSVG(points, series, opts={}){
+  // points: [{ref, ...keys}]
+  const W = opts.W || 720;
+  const H = opts.H || 240;
+  const pad = 40;
+
+  // collect all values
+  let all=[];
+  series.forEach(s=>points.forEach(p=>{ const v=p[s.key]; if(Number.isFinite(v)) all.push(v);}));
+  if(!all.length) return '<div class="muted">Sem histórico suficiente</div>';
+
+  const maxY = Math.max(1, ...all);
+  const minY = 0;
+
+  const x = i => pad + (points.length<=1 ? 0 : (i/(points.length-1))*(W-2*pad));
+  const y = v => (H-pad) - ((v-minY)/(maxY-minY))*(H-2*pad);
+
+  // grid
+  const ticks=4;
+  let grid='';
+  for(let t=0;t<=ticks;t++){
+    const v=(maxY/ticks)*t;
+    const yy=y(v);
+    grid += `<line x1="${pad}" y1="${yy}" x2="${W-pad}" y2="${yy}" stroke="rgba(255,255,255,.08)" />`;
+    grid += `<text x="${pad-8}" y="${yy+4}" fill="rgba(255,255,255,.55)" font-size="10" text-anchor="end">${v.toFixed(1).replace('.',',')}</text>`;
+  }
+
+  // labels
+  const labels = points.map((p,i)=>`<text x="${x(i)}" y="${H-10}" fill="rgba(255,255,255,.55)" font-size="10" text-anchor="middle">${escapeHtml(p.ref)}</text>`).join('');
+
+  // paths
+  const paths = series.map(s=>{
+    let d='';
+    points.forEach((p,i)=>{
+      const v=p[s.key];
+      if(!Number.isFinite(v)) return;
+      d += (d? ' L ':'M ') + x(i).toFixed(1) + ' ' + y(v).toFixed(1);
+    });
+    return `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="3" />`;
+  }).join('');
+
+  // last dots
+  const dots = series.map(s=>{
+    const v = points[points.length-1][s.key];
+    if(!Number.isFinite(v)) return '';
+    return `<circle cx="${x(points.length-1)}" cy="${y(v)}" r="4" fill="${s.color}" />`;
+  }).join('');
+
+  const legend = `<div class="legend">` + series.map(s=>`<div class="lg"><span class="dot" style="background:${s.color}"></span>${escapeHtml(s.name)}</div>`).join('') + `</div>`;
+
+  return `<div>
+    <svg viewBox="0 0 ${W} ${H}" width="100%" height="260">${grid}${paths}${dots}${labels}</svg>
+    ${legend}
+  </div>`;
+}
+
+
+function buildExecutiveSummary(hist, last){
+  const prev = hist.length > 1 ? hist[hist.length - 2] : null;
+  const cobertura = last.fteN > 0 ? (last.fteA / last.fteN) : 0;
+  const gap = last.fteA - last.fteN;
+
+  let trendTxt = 'sem histórico suficiente para análise de tendência';
+  if(prev){
+    const prevGap = prev.fteA - prev.fteN;
+    if(gap > prevGap) trendTxt = 'houve deterioração da capacidade em relação ao período anterior';
+    else if(gap < prevGap) trendTxt = 'houve melhora da capacidade em relação ao período anterior';
+    else trendTxt = 'a capacidade manteve-se estável em relação ao período anterior';
+  }
+
+  let statusTxt, actionTxt;
+  if(cobertura >= 1){
+    statusTxt = 'capacidade adequada para absorver a demanda atual';
+    actionTxt = 'manter o dimensionamento e monitorar variações de demanda';
+  }else if(cobertura >= 0.9){
+    statusTxt = 'capacidade em nível crítico, com risco de sobrecarga operacional';
+    actionTxt = 'avaliar redistribuição de atividades ou reforço pontual da equipe';
+  }else{
+    statusTxt = 'capacidade insuficiente para atender à demanda';
+    actionTxt = 'priorizar ações estruturais de recomposição de FTE ou redução de demanda';
+  }
+
+  return `
+    <b>Situação atual:</b> ${statusTxt}.<br>
+    <b>Impacto:</b> cobertura de ${pct(cobertura)} (${fmtInt(last.fteA)} FTEs disponíveis para ${fmtInt(last.fteN)} necessários).<br>
+    <b>Tendência:</b> ${trendTxt}.<br>
+    <b>Ação recomendada:</b> ${actionTxt}.
+  `;
+}
+
+(function(){
+  const arr = (read().Capacity)||[];
+  if(!arr.length){
+    document.getElementById('empty').style.display='block';
+    return;
+  }
+  document.getElementById('root').style.display='block';
+
+  // build per entry
+  const hist = arr.map(e=>{
+    const s=e.data||{};
+    const ref=s.ref_period||e.ref_period||'';
+
+    const dias=safeNum(s.diasUteis);
+    const horas=safeNum(s.horasDia);
+    const totalMin=dias*horas*60;
+
+    const perdas=s.perdas||{};
+    const perdaMes=(Object.values(perdas).reduce((a,v)=>a+safeNum(v),0))*dias;
+    const prod=totalMin-perdaMes;
+
+    let fteC=0;
+    const contrItems=[];
+    (s.atividades||[]).forEach(a=>{
+      const t=safeNum(a.tempo), v=safeNum(a.vol);
+      if(prod>0 && t>0 && v>0){
+        const f = (t*v)/prod;
+        fteC += f;
+        contrItems.push({nome:a.atividade||'', fte:f});
+      }
+    });
+
+    let fteO=0;
+    const outItems=[];
+    (s.outras||[]).forEach(o=>{
+      const t=safeNum(o.tempo), v=safeNum(o.vol), r=safeNum(o.rec);
+      if(prod>0 && t>0 && v>0 && r>0){
+        const f=(t*v*r)/prod;
+        fteO += f;
+        outItems.push({nome:o.nome||'', fte:f});
+      }
+    });
+
+    const fteBase = fteC + fteO;
+    const marg = safeNum(s.margens?.trein)+safeNum(s.margens?.afast)+safeNum(s.margens?.ferias);
+    const fteN = Math.ceil(fteBase*(1+marg/100));
+    const fteA = safeNum(s.fteAtual);
+
+    // losses breakdown month in minutes
+    const perdasMes = {
+      emails: safeNum(perdas.emails)*dias,
+      paradas: safeNum(perdas.paradas)*dias,
+      ajuda: safeNum(perdas.ajuda)*dias,
+      trein: safeNum(perdas.trein)*dias,
+      eventos: safeNum(perdas.eventos)*dias,
+    };
+
+    return {ref, fteN, fteA, fteC, fteO, perdaMes, perdaPct: totalMin>0 ? perdaMes/totalMin : 0, contrItems, outItems, perdasMes};
+  });
+
+  const last = hist[hist.length-1];
+  document.getElementById('refHeader').innerText = 'Ref.: ' + last.ref;
+  const cobertura = last.fteN>0 ? (last.fteA/last.fteN) : 0;
+
+  document.getElementById('kpiCob').innerText = pct(cobertura);
+  document.getElementById('kpiAt').innerText = fmtInt(last.fteA);
+  document.getElementById('kpiNe').innerText = fmtInt(last.fteN);
+  document.getElementById('kpiGap').innerText = (last.fteA-last.fteN);
+  document.getElementById('kpiStatus').innerText = last.fteA>=last.fteN ? '✅ Capacidade adequada' : '🔴 Capacidade abaixo do necessário';
+
+  // Executive text
+  document.getElementById('execTxt').innerHTML = buildExecutiveSummary(hist, last);
+
+  // Global chart (real lines)
+  document.getElementById('chartGlobal').innerHTML = lineChartSVG(hist, [
+    {key:'fteN', name:'FTE Necessário', color:getComputedStyle(document.documentElement).getPropertyValue('--cNeed').trim()},
+    {key:'fteA', name:'FTE Atual', color:getComputedStyle(document.documentElement).getPropertyValue('--cAtual').trim()},
+  ], {W: 980, H: 260});
+
+  // Contratuais
+  document.getElementById('cQtd').innerText = String((arr[arr.length-1].data?.atividades||[]).length);
+  document.getElementById('cFte').innerText = fmt(last.fteC,3);
+  document.getElementById('cBars').innerHTML = renderBars(
+    last.contrItems.map(x=>({label:x.nome||'(sem nome)', val:x.fte})),
+    'val','label',
+    (v)=>'FTE '+fmt(v,3)
+  );
+  document.getElementById('chartContr').innerHTML = lineChartSVG(hist, [
+    {key:'fteC', name:'FTE Contratuais', color:getComputedStyle(document.documentElement).getPropertyValue('--cContr').trim()},
+  ], {W: 720, H: 240});
+
+  // Outras
+  document.getElementById('oFte').innerText = fmt(last.fteO,3);
+  const share = (last.fteC+last.fteO)>0 ? (last.fteO/(last.fteC+last.fteO)) : 0;
+  document.getElementById('oPct').innerText = pct(share);
+  document.getElementById('oBars').innerHTML = renderBars(
+    last.outItems.map(x=>({label:x.nome||'(sem nome)', val:x.fte})),
+    'val','label',
+    (v)=>'FTE '+fmt(v,3)
+  );
+  document.getElementById('chartOut').innerHTML = lineChartSVG(hist, [
+    {key:'fteO', name:'FTE Outras', color:getComputedStyle(document.documentElement).getPropertyValue('--cOut').trim()},
+  ], {W: 720, H: 240});
+
+  // Perdas
+  document.getElementById('pTot').innerText = fmtInt(last.perdaMes);
+  document.getElementById('pPct').innerText = pct(last.perdaPct);
+  const perdasList = [
+    {label:'E-mails', val:last.perdasMes.emails},
+    {label:'Paradas', val:last.perdasMes.paradas},
+    {label:'Ajuda colega', val:last.perdasMes.ajuda},
+    {label:'Treinamentos', val:last.perdasMes.trein},
+    {label:'Eventos', val:last.perdasMes.eventos},
+  ];
+  document.getElementById('pBars').innerHTML = renderBars(perdasList,'val','label',(v)=>fmtInt(v)+' min');
+  document.getElementById('chartPerdas').innerHTML = lineChartSVG(hist.map(p=>({ref:p.ref, perdaMes:p.perdaMes, perdaPct:p.perdaPct*100})), [
+    {key:'perdaMes', name:'Perdas (min/mês)', color:getComputedStyle(document.documentElement).getPropertyValue('--cPerda').trim()},
+    {key:'perdaPct', name:'% perdas', color:getComputedStyle(document.documentElement).getPropertyValue('--cPct').trim()},
+  ], {W: 720, H: 240});
+})();
+</script>
+</body>
+</html>

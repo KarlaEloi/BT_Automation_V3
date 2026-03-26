@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Histórico | BT ONE</title>
+  <style>
+    :root{--purple:#6a1b9a;--purple2:#7e57c2;--bg:#0e1024;--card:#15183a;--border:#262a55;--text:#fff;--muted:#b9b9d6}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,sans-serif;background:radial-gradient(circle at top,#1b1f4b,#0e1024 60%);color:var(--text)}
+    header{padding:16px 22px;background:linear-gradient(90deg,var(--purple),var(--purple2))}
+    header h1{margin:0;font-size:20px}
+    header p{margin:4px 0 0;font-size:12px;opacity:.95}
+    main{padding:18px 22px;max-width:1200px;margin:0 auto}
+    .topActions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+    button{border:none;border-radius:10px;padding:8px 12px;font-weight:700;cursor:pointer}
+    .btnPrimary{background:var(--purple);color:#fff}
+    .btnLight{background:#eee;color:#222}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+    .toolCard{background:linear-gradient(145deg,#1b1f4b,#15183a);border:1px solid var(--border);border-radius:16px;padding:14px}
+    .toolCard h3{margin:0 0 6px 0;font-size:15px}
+    .toolCard .desc{color:var(--muted);font-size:12px;margin:0 0 10px 0}
+    .list{display:flex;flex-direction:column;gap:8px}
+    .row{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);padding:8px;border-radius:12px}
+    .meta{font-size:11px;color:var(--muted);line-height:1.25}
+    .pill{font-size:11px;padding:6px 10px;border-radius:10px}
+    .open{background:#ede7f6;color:#3b1a5a;border:1px solid #d1c4e9}
+    .del{background:#3a1b2b;color:#ffd6e7;border:1px solid rgba(255,255,255,.12)}
+    .empty{padding:14px;border:1px dashed rgba(255,255,255,.2);border-radius:16px;color:var(--muted)}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Histórico de Versões</h1>
+  <p>BT ONE • Governança • Versões salvas por ferramenta</p>
+</header>
+<main>
+  <div class="topActions">
+    <button class="btnPrimary" onclick="location.href='/'">🏠 Voltar ao Menu</button>
+    <button class="btnLight" onclick="clearAll()">🧹 Limpar Histórico (local)</button>
+  </div>
+
+  <div id="root"></div>
+
+<script>
+const HISTORY_KEY = 'BT_ONE_HISTORY';
+
+const toolToPage = {
+  'Taxonomia': 'taxonomia.html',
+  'Curva Z': 'curva_z.html',
+  'HLPM': 'hlpm.html',
+  'SIPOC': 'sipoc.html',
+  'Capacity': 'capacity.html',
+  'Skill Matrix': 'skill.html?v=2',
+  'FMEA': 'fmea.html'
+};
+
+function readStore(){
+  return JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}');
+}
+function writeStore(store){
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(store));
+}
+
+function render(){
+  const store = readStore();
+  const tools = Object.keys(store);
+
+  const root = document.getElementById('root');
+  root.innerHTML = '';
+
+  if(!tools.length){
+    root.innerHTML = `<div class="empty">Nenhuma versão salva ainda. Salve em uma ferramenta (ex.: Taxonomia) e volte aqui.</div>`;
+    return;
+  }
+
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+
+  tools.forEach(tool=>{
+    const entries = store[tool] || [];
+    const card = document.createElement('div');
+    card.className = 'toolCard';
+
+    const title = document.createElement('h3');
+    title.textContent = tool;
+    card.appendChild(title);
+
+    const desc = document.createElement('div');
+    desc.className = 'desc';
+    desc.textContent = `Total de versões: ${entries.length}`;
+    card.appendChild(desc);
+
+    const list = document.createElement('div');
+    list.className = 'list';
+
+    entries.slice().reverse().forEach(entry=>{
+      const row = document.createElement('div');
+      row.className = 'row';
+
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.textContent = `${entry.id} • ${entry.date || ''}`;
+
+      const btnOpen = document.createElement('button');
+      btnOpen.className = 'pill open';
+      btnOpen.textContent = 'Abrir';
+      btnOpen.onclick = ()=>openVersion(tool, entry.id);
+
+      const btnDel = document.createElement('button');
+      btnDel.className = 'pill del';
+      btnDel.textContent = 'Excluir';
+      btnDel.onclick = ()=>deleteVersion(tool, entry.id);
+
+      row.appendChild(meta);
+      row.appendChild(btnOpen);
+      row.appendChild(btnDel);
+      list.appendChild(row);
+    });
+
+    card.appendChild(list);
+    grid.appendChild(card);
+  });
+
+  root.appendChild(grid);
+}
+
+function openVersion(tool, id){
+  const store = readStore();
+  const arr = store[tool] || [];
+  const idx = arr.findIndex(e=>e.id===id);
+  if(idx===-1) return;
+
+  // Move a versão escolhida para o final (vira "latest")
+  const [picked] = arr.splice(idx,1);
+  arr.push(picked);
+  store[tool] = arr;
+  writeStore(store);
+
+  const page = toolToPage[tool] || 'index.html';
+  location.href = page;
+}
+
+function deleteVersion(tool, id){
+  if(!confirm('Excluir esta versão do histórico local?')) return;
+  const store = readStore();
+  const arr = store[tool] || [];
+  store[tool] = arr.filter(e=>e.id!==id);
+  if(store[tool].length===0) delete store[tool];
+  writeStore(store);
+  render();
+}
+
+function clearAll(){
+  if(!confirm('Limpar TODO o histórico local (localStorage)?')) return;
+  localStorage.removeItem(HISTORY_KEY);
+  render();
+}
+
+render();
+</script>
+</main>
+</body>
+</html>

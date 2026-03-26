@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Capacity Plan</title>
+
+  <!-- ✅ IMPORTAÇÃO DO app.js (mantém JSON / Item 5) -->
+  <script src="/static/app.js"></script>
+  <!-- ✅ Patch do Capacity (restaura versões do histórico) -->
+  <script src="/static/capacity_patch.js" defer></script>
+
+  <style>
+    /* ===== Header padrão (igual FMEA) ===== */
+    body { font-family: Arial, sans-serif; margin:0; background:#faf8ff; }
+    .header{background:#6a1b9a;color:#fff;padding:12px 18px}
+    .header h2{margin:0;font-size:20px}
+    .sub{font-size:13px;opacity:.95;margin-top:2px}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 18px}
+    .toolbar button{padding:6px 10px;cursor:pointer;border-radius:8px;border:1px solid #ccc;background:#fff;font-weight:600}
+    .toolbar button.primary{background:#6a1b9a;color:#fff;border-color:#6a1b9a}
+
+    /* ===== Layout original ===== */
+    main{padding:0 18px 24px}
+    h3 { margin-top: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 12px; }
+    th, td { border: 1px solid #999; padding: 6px; }
+    th { background: #f0f0f0; }
+    tfoot th, tfoot td { background: #e6f0ff; font-weight: bold; }
+    input { width: 100%; box-sizing: border-box; }
+    .readonly { background: #e9e9e9; }
+    .calc { background: #fff2cc; }
+    .btn { padding: 6px 10px; cursor: pointer; }
+    .box { border: 1px solid #999; padding: 8px; background: #fff2cc; }
+
+    /* ===== Print (PDF) ===== */
+    @media print{
+      .toolbar{display:none !important;}
+      body{background:#fff;}
+      main{padding:0 10px 10px;}
+      button{display:none !important;}
+      input{border:0;}
+    }
+  
+  /* ===== BT ONE (Capacity) – Referência + Insights ===== */
+  .refBox{display:inline-flex;align-items:center;gap:6px;border:1px solid #ccc;background:#fff;padding:6px 10px;border-radius:8px;font-weight:700;color:#3b1a5a}
+  .refBox label{font-size:12px;font-weight:800}
+  .refBox input{border:1px solid #ddd;border-radius:6px;padding:4px 6px;min-width:130px}
+  .insBtn{background:#ede7f6 !important;color:#3b1a5a !important;border:1px solid #d1c4e9 !important}
+  .insPanel{margin:10px 18px 0;border:1px solid #bbb;border-radius:10px;background:#fff;padding:10px;display:none}
+  .insPanel b{color:#3b1a5a}
+</style>
+</head>
+
+
+<body>
+
+  <!-- ===== Cabeçalho padrão Accenture (igual FMEA) ===== -->
+  <div class="header">
+    <h2>Capacity Plan</h2>
+    <div class="sub">Portal BT • Piloto RTR • Accenture • Business Transformation</div>
+  </div>
+
+  <!-- ===== Toolbar: salvar / menu / export ===== -->
+  <div class="toolbar">
+    <button class="primary" type="button" onclick="salvar()">💾 Salvar</button>
+    <button type="button" onclick="goMenu()">🏠 Menu</button>
+    <button type="button" onclick="exportPDF()">🖨️ Salvar PDF</button>
+    <button type="button" onclick="exportExcel()">📊 Salvar Excel</button>
+  <button type="button" class="insBtn" onclick="toggleInsights()">💡 Insights</button>
+  <span class="refBox"><label for="refPeriod">Ref.</label><input id="refPeriod" type="month"></span>
+  </div>
+
+  <main>
+
+    <!-- ================================================= -->
+    <!-- 1. JORNADA -->
+    <!-- ================================================= -->
+    <h3>1. Jornada</h3>
+    <table>
+      <tr><td>Dias úteis</td><td><input id="diasUteis" type="number"></td></tr>
+      <tr><td>Horas úteis por dia</td><td><input id="horasDia" type="number"></td></tr>
+    </table>
+
+    <!-- ================================================= -->
+    <!-- 2. TEMPO DISPONÍVEL -->
+    <!-- ================================================= -->
+    <h3>2. Tempo disponível</h3>
+    <table>
+      <tr><td>Total (horas)</td><td class="calc" id="tempoHoras"></td></tr>
+      <tr><td>Total (min)</td><td class="calc" id="tempoMin"></td></tr>
+    </table>
+
+    <!-- ================================================= -->
+    <!-- 3. PERDAS -->
+    <!-- ================================================= -->
+    <h3>3. Perdas diárias (min/dia)</h3>
+    <table>
+      <tr><td>E-mails</td><td><input class="perda" data-key="emails"></td></tr>
+      <tr><td>Paradas</td><td><input class="perda" data-key="paradas"></td></tr>
+      <tr><td>Ajuda colega</td><td><input class="perda" data-key="ajuda"></td></tr>
+      <tr><td>Treinamentos</td><td><input class="perda" data-key="trein"></td></tr>
+      <tr><td>Eventos</td><td><input class="perda" data-key="eventos"></td></tr>
+      <tr><th>Total perdas/mês</th><th class="calc" id="totalPerdas"></th></tr>
+    </table>
+
+    <!-- ================================================= -->
+    <!-- 4. TEMPO PRODUTIVO -->
+    <!-- ================================================= -->
+    <h3>4. Tempo produtivo</h3>
+    <table>
+      <tr><td>Produtivo mês (min)</td><td class="calc" id="tempoProdMes"></td></tr>
+      <tr><td>Produtivo dia (min)</td><td class="calc" id="tempoProdDia"></td></tr>
+    </table>
+
+    <!-- ================================================= -->
+    <!-- 5. ATIVIDADES CONTRATUAIS (MANTIDO + JSON) -->
+    <!-- ================================================= -->
+    <h3>5. Atividades contratuais</h3>
+    <table id="atividadesTable">
+      <thead>
+        <tr>
+          <th>Atividade</th>
+          <th>Tempo (min)</th>
+          <th>Volume/mês</th>
+          <th>Carga (min)</th>
+          <th>FTE</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot>
+        <tr>
+          <th colspan="3">TOTAL</th>
+          <th class="calc" id="totalCarga"></th>
+          <th class="calc" id="totalFTE"></th>
+          <th></th>
+        </tr>
+      </tfoot>
+    </table>
+    <button class="btn" type="button" onclick="adicionarAtividadeManual()">➕ Nova atividade</button>
+
+    <!-- ================================================= -->
+    <!-- 6. OUTRAS ATIVIDADES (PADRÃO EXCEL) -->
+    <!-- ================================================= -->
+    <h3>6. Outras atividades</h3>
+    <table id="outrasTable">
+      <thead>
+        <tr>
+          <th>Atividade</th>
+          <th>Tempo padrão (min)</th>
+          <th>Volume / mês</th>
+          <th>Recursos envolvidos</th>
+          <th>Carga de trabalho (min)</th>
+          <th>FTE</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Reuniões</td>
+          <td><input class="outra-tempo" data-key="reun_t"></td>
+          <td><input class="outra-vol" data-key="reun_v"></td>
+          <td><input class="outra-rec" data-key="reun_r"></td>
+          <td class="calc outra-carga">0</td>
+          <td class="calc outra-fte">0</td>
+        </tr>
+        <tr>
+          <td>Elaborar apresentações e Reports</td>
+          <td><input class="outra-tempo" data-key="rep_t"></td>
+          <td><input class="outra-vol" data-key="rep_v"></td>
+          <td><input class="outra-rec" data-key="rep_r"></td>
+          <td class="calc outra-carga">0</td>
+          <td class="calc outra-fte">0</td>
+        </tr>
+        <tr>
+          <td>Atividades de BT</td>
+          <td><input class="outra-tempo" data-key="bt_t"></td>
+          <td><input class="outra-vol" data-key="bt_v"></td>
+          <td><input class="outra-rec" data-key="bt_r"></td>
+          <td class="calc outra-carga">0</td>
+          <td class="calc outra-fte">0</td>
+        </tr>
+        <tr>
+          <td>Atualizar POP / Fluxograma</td>
+          <td><input class="outra-tempo" data-key="pop_t"></td>
+          <td><input class="outra-vol" data-key="pop_v"></td>
+          <td><input class="outra-rec" data-key="pop_r"></td>
+          <td class="calc outra-carga">0</td>
+          <td class="calc outra-fte">0</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <th colspan="4">TOTAL</th>
+          <th class="calc" id="totalOutrasCarga"></th>
+          <th class="calc" id="totalOutrasFTE"></th>
+        </tr>
+      </tfoot>
+    </table>
+
+    <!-- ================================================= -->
+    <!-- 7. TOTAL FTE SEM MARGEM -->
+    <!-- ================================================= -->
+    <h3>7. Total FTE necessário (sem margem de segurança)</h3>
+    <div class="box">
+      FTE base (contratuais + outras): <b><span id="fteSemMargem">0</span></b>
+    </div>
+
+    <!-- ================================================= -->
+    <!-- 8. MARGEM DE SEGURANÇA -->
+    <!-- ================================================= -->
+    <h3>8. Margem de segurança</h3>
+    <table>
+      <tr><td>Treinamentos (%)</td><td><input id="margemTrein" type="number" value="0"></td></tr>
+      <tr><td>Afastamento / licenças / doenças (%)</td><td><input id="margemAfast" type="number" value="0"></td></tr>
+      <tr><td>Férias (%)</td><td><input id="margemFerias" type="number" value="0"></td></tr>
+      <tr><th>Total margem (%)</th><th class="calc" id="margemTotal">0</th></tr>
+    </table>
+
+    <!-- ================================================= -->
+    <!-- 9. TOTAL FTE COM MARGEM -->
+    <!-- ================================================= -->
+    <h3>9. Total FTE incluindo margem de segurança</h3>
+    <div class="box">
+      Total FTE com margem: <b><span id="fteComMargem">0</span></b><br>
+      Total de FTE’s necessários (arredondamento para cima): <b><span id="fteArredondado">0</span></b>
+    </div>
+
+    <!-- ================================================= -->
+    <!-- 10. UTILIZAÇÃO -->
+    <!-- ================================================= -->
+    <h3>10. Utilização da capacidade</h3>
+    <table>
+      <tr><td>Total FTE atual na equipe</td><td><input id="fteAtual" type="number" value="0"></td></tr>
+      <tr><th>% Utilização (atuais / necessários)</th><th class="calc" id="utilizacao">0%</th></tr>
+    </table>
+
+    <!-- ❌ Botão Salvar inferior removido (agora só no topo) -->
+
+  </main>
+
+  <!-- ================================================= -->
+  <!-- SCRIPT (LÓGICA ORIGINAL MANTIDA) -->
+  <!-- ================================================= -->
+  
+<script>
+function toggleInsights(){
+  const p = document.getElementById('insightsPanel');
+  if(!p) return;
+  p.style.display = (p.style.display==='none' || p.style.display==='') ? 'block' : 'none';
+}
+function setDefaultRefPeriod(){
+  const el = document.getElementById('refPeriod');
+  if(el && !el.value){
+    el.value = new Date().toISOString().slice(0,7);
+  }
+}
+window.addEventListener('DOMContentLoaded', ()=>{
+  setDefaultRefPeriod();
+  // auto-open insights if called from home
+  try{
+    const u = new URL(window.location.href);
+    if(u.searchParams.get('insights')==='1'){
+      toggleInsights();
+    }
+  }catch(e){}
+});
+</script>
+<script>
+    let tempoProdutivoMes = 0;
+
+    /* ===== BASE (1–4) ===== */
+    function recalcularBase() {
+      const dias = Number(diasUteis.value || 0);
+      const horas = Number(horasDia.value || 0);
+      const totalMin = dias * horas * 60;
+      tempoMin.innerText = totalMin.toFixed(2);
+      tempoHoras.innerText = (totalMin / 60).toFixed(2);
+
+      let perdas = 0;
+      document.querySelectorAll(".perda").forEach(p => {
+        perdas += Number(p.value || 0) * dias;
+      });
+      totalPerdas.innerText = perdas.toFixed(2);
+
+      tempoProdutivoMes = totalMin - perdas;
+      tempoProdMes.innerText = tempoProdutivoMes.toFixed(2);
+      tempoProdDia.innerText = dias ? (tempoProdutivoMes / dias).toFixed(2) : "0";
+
+      recalcularAtividades();
+      recalcularOutrasAtividades();
+      recalcularConsolidado();
+    }
+
+    /* ===== ITEM 5 (JSON) ===== */
+    function adicionarLinha(desc = "", ro = false) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><input value="${desc}" ${ro ? "readonly class='readonly'" : ""}></td>
+        <td><input class="tempo" type="number" step="any"></td>
+        <td><input class="vol" type="number" step="any"></td>
+        <td class="calc carga">0</td>
+        <td class="calc fte">0</td>
+        <td><button type="button" onclick="this.closest('tr').remove(); recalcularAtividades(); recalcularConsolidado();">🗑️</button></td>
+      `;
+      tr.querySelectorAll("input").forEach(i => i.oninput = () => {
+        recalcularAtividades();
+        recalcularConsolidado();
+      });
+      document.querySelector("#atividadesTable tbody").appendChild(tr);
+    }
+
+    function adicionarAtividadeManual() { adicionarLinha(); }
+
+    function recalcularAtividades() {
+      let somaCarga = 0, somaFTE = 0;
+      document.querySelectorAll("#atividadesTable tbody tr").forEach(tr => {
+        const tempo = Number(tr.querySelector(".tempo").value || 0);
+        const vol = Number(tr.querySelector(".vol").value || 0);
+        const carga = tempo * vol;
+        tr.querySelector(".carga").innerText = carga.toFixed(2);
+        const fte = tempoProdutivoMes ? carga / tempoProdutivoMes : 0;
+        tr.querySelector(".fte").innerText = fte.toFixed(3);
+        somaCarga += carga;
+        somaFTE += fte;
+      });
+      totalCarga.innerText = somaCarga.toFixed(2);
+      totalFTE.innerText = somaFTE.toFixed(3);
+    }
+
+    /* ===== ITEM 6 ===== */
+    function recalcularOutrasAtividades() {
+      let somaCarga = 0, somaFTE = 0;
+      document.querySelectorAll("#outrasTable tbody tr").forEach(tr => {
+        const tempo = Number(tr.querySelector(".outra-tempo").value || 0);
+        const vol = Number(tr.querySelector(".outra-vol").value || 0);
+        const rec = Number(tr.querySelector(".outra-rec").value || 0);
+        const carga = tempo * vol * rec;
+        tr.querySelector(".outra-carga").innerText = carga.toFixed(2);
+        const fte = tempoProdutivoMes ? carga / tempoProdutivoMes : 0;
+        tr.querySelector(".outra-fte").innerText = fte.toFixed(3);
+        somaCarga += carga;
+        somaFTE += fte;
+      });
+      totalOutrasCarga.innerText = somaCarga.toFixed(2);
+      totalOutrasFTE.innerText = somaFTE.toFixed(3);
+    }
+
+    /* ===== ITENS 7–10 ===== */
+    function recalcularConsolidado() {
+      const fteContratuais = Number(totalFTE.innerText || 0);
+      const fteOutras = Number(totalOutrasFTE.innerText || 0);
+      const fteBase = fteContratuais + fteOutras;
+      fteSemMargem.innerText = fteBase.toFixed(3);
+
+      const mTrein = Number(margemTrein.value || 0);
+      const mAfast = Number(margemAfast.value || 0);
+      const mFerias = Number(margemFerias.value || 0);
+      const mTotal = mTrein + mAfast + mFerias;
+      margemTotal.innerText = mTotal.toFixed(2);
+
+      const fteMargem = fteBase * (1 + (mTotal / 100));
+      fteComMargem.innerText = fteMargem.toFixed(3);
+
+      const fteRound = Math.ceil(fteMargem);
+      fteArredondado.innerText = fteRound;
+
+      const atual = Number(fteAtual.value || 0);
+      utilizacao.innerText = fteRound > 0 ? ((atual / fteRound) * 100).toFixed(1) + "%" : "0%";
+    }
+
+    /* ===== SALVAR (LOCAL) ===== */
+    function salvar() {
+    // ✅ Garantir que tudo está sincronizado antes de capturar o snapshot
+    if(typeof recalcularBase==='function') recalcularBase();
+    if(typeof recalcularOutrasAtividades==='function') recalcularOutrasAtividades();
+    if(typeof recalcularConsolidado==='function') recalcularConsolidado();
+
+      const state = {
+ ref_period: (document.getElementById("refPeriod")?.value || new Date().toISOString().slice(0,7)),
+        diasUteis: diasUteis.value,
+        horasDia: horasDia.value,
+        perdas: {},
+        atividades: [],
+        outras: [],
+        margens: {
+          trein: margemTrein.value,
+          afast: margemAfast.value,
+          ferias: margemFerias.value
+        },
+        fteAtual: fteAtual.value
+      };
+
+      document.querySelectorAll(".perda").forEach(p => state.perdas[p.dataset.key] = p.value);
+
+      document.querySelectorAll("#atividadesTable tbody tr").forEach(tr => {
+        state.atividades.push({
+          atividade: tr.querySelector("td input").value,
+          tempo: tr.querySelector(".tempo").value,
+          vol: tr.querySelector(".vol").value
+        });
+      });
+
+      document.querySelectorAll("#outrasTable tbody tr").forEach(tr => {
+        state.outras.push({
+          nome: tr.children[0].innerText,
+          tempo: tr.querySelector(".outra-tempo").value,
+          vol: tr.querySelector(".outra-vol").value,
+          rec: tr.querySelector(".outra-rec").value
+        });
+      });
+
+      localStorage.setItem("capacity_state", JSON.stringify(state));
+
+  // ===== BT ONE: salvar versão no histórico (não apaga histórico existente) =====
+  try {
+    const raw = localStorage.getItem("capacity_state");
+    const data = raw ? JSON.parse(raw) : null;
+    const store = JSON.parse(localStorage.getItem("BT_ONE_HISTORY") || "{}");
+    store["Capacity"] = store["Capacity"] || [];
+    store["Capacity"].push({
+  id: `Capacity_${data?.ref_period || "sem_ref"}_${Date.now()}`,
+  tool: "Capacity",
+  ref_period: data?.ref_period || "",
+  date: new Date().toLocaleString(),
+  data
+});
+    localStorage.setItem("BT_ONE_HISTORY", JSON.stringify(store));
+    const m = document.getElementById('insightMsg');
+    if(m) m.textContent = 'Histórico atualizado: versão registrada em BT_ONE_HISTORY (Capacity).';
+  } catch (e) {
+    console.warn("Erro ao salvar histórico do Capacity", e);
+  }
+
+      alert("Salvo com sucesso (local).\n\nDica: use 'Salvar PDF' ou 'Salvar Excel' no topo.");
+    }
+
+    /* ===== Navegação ===== */
+    function goMenu(){
+      // volta para a home (rota / do FastAPI)
+      window.location.href = "/";
+    }
+
+    /* ===== Exportar PDF ===== */
+    function exportPDF(){
+      // abre a impressão; no navegador escolha "Salvar como PDF"
+      window.print();
+    }
+
+    /* ===== Exportar Excel (compatível) ===== */
+    function exportExcel(){
+      // gera um .xls compatível com Excel a partir dos dados atuais
+      const now = new Date();
+      const stamp = now.toISOString().slice(0,19).replace(/[:T]/g,'-');
+      const filename = `capacity_${stamp}.xls`;
+
+      // monta HTML com tabelas (Excel abre)
+      const esc = (s)=> String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+      // Seção 1-4
+      const dias = esc(diasUteis.value);
+      const horas = esc(horasDia.value);
+      const tHoras = esc(tempoHoras.innerText);
+      const tMin = esc(tempoMin.innerText);
+      const perdas = {
+        emails: esc(document.querySelector('.perda[data-key="emails"]').value),
+        paradas: esc(document.querySelector('.perda[data-key="paradas"]').value),
+        ajuda: esc(document.querySelector('.perda[data-key="ajuda"]').value),
+        trein: esc(document.querySelector('.perda[data-key="trein"]').value),
+        eventos: esc(document.querySelector('.perda[data-key="eventos"]').value),
+        total: esc(totalPerdas.innerText)
+      };
+      const prodMes = esc(tempoProdMes.innerText);
+      const prodDia = esc(tempoProdDia.innerText);
+
+      // Item 5
+      const atvRows = Array.from(document.querySelectorAll('#atividadesTable tbody tr')).map(tr=>({
+        atividade: esc(tr.querySelector('td input').value),
+        tempo: esc(tr.querySelector('.tempo').value),
+        vol: esc(tr.querySelector('.vol').value),
+        carga: esc(tr.querySelector('.carga').innerText),
+        fte: esc(tr.querySelector('.fte').innerText)
+      }));
+
+      // Item 6
+      const outRows = Array.from(document.querySelectorAll('#outrasTable tbody tr')).map(tr=>({
+        atividade: esc(tr.children[0].innerText),
+        tempo: esc(tr.querySelector('.outra-tempo').value),
+        vol: esc(tr.querySelector('.outra-vol').value),
+        rec: esc(tr.querySelector('.outra-rec').value),
+        carga: esc(tr.querySelector('.outra-carga').innerText),
+        fte: esc(tr.querySelector('.outra-fte').innerText)
+      }));
+
+      const html = `\
+<html>\
+<head>\
+<meta charset="UTF-8">\
+</head>\
+<body>\
+<h2>Capacity Plan</h2>\
+<p><b>Portal BT</b> • Piloto RTR • Accenture • Business Transformation</p>\
+\
+<h3>1. Jornada</h3>\
+<table border="1">\
+<tr><th>Dias úteis</th><td>${dias}</td></tr>\
+<tr><th>Horas úteis por dia</th><td>${horas}</td></tr>\
+</table>\
+\
+<h3>2. Tempo disponível</h3>\
+<table border="1">\
+<tr><th>Total (horas)</th><td>${tHoras}</td></tr>\
+<tr><th>Total (min)</th><td>${tMin}</td></tr>\
+</table>\
+\
+<h3>3. Perdas diárias (min/dia)</h3>\
+<table border="1">\
+<tr><th>E-mails</th><td>${perdas.emails}</td></tr>\
+<tr><th>Paradas</th><td>${perdas.paradas}</td></tr>\
+<tr><th>Ajuda colega</th><td>${perdas.ajuda}</td></tr>\
+<tr><th>Treinamentos</th><td>${perdas.trein}</td></tr>\
+<tr><th>Eventos</th><td>${perdas.eventos}</td></tr>\
+<tr><th>Total perdas/mês</th><td>${perdas.total}</td></tr>\
+</table>\
+\
+<h3>4. Tempo produtivo</h3>\
+<table border="1">\
+<tr><th>Produtivo mês (min)</th><td>${prodMes}</td></tr>\
+<tr><th>Produtivo dia (min)</th><td>${prodDia}</td></tr>\
+</table>\
+\
+<h3>5. Atividades contratuais</h3>\
+<table border="1">\
+<tr><th>Atividade</th><th>Tempo (min)</th><th>Volume/mês</th><th>Carga (min)</th><th>FTE</th></tr>\
+${atvRows.map(r=>`<tr><td>${r.atividade}</td><td>${r.tempo}</td><td>${r.vol}</td><td>${r.carga}</td><td>${r.fte}</td></tr>`).join('')}\
+<tr><th colspan="3">TOTAL</th><th>${esc(totalCarga.innerText)}</th><th>${esc(totalFTE.innerText)}</th></tr>\
+</table>\
+\
+<h3>6. Outras atividades</h3>\
+<table border="1">\
+<tr><th>Atividade</th><th>Tempo padrão (min)</th><th>Volume/mês</th><th>Recursos envolvidos</th><th>Carga (min)</th><th>FTE</th></tr>\
+${outRows.map(r=>`<tr><td>${r.atividade}</td><td>${r.tempo}</td><td>${r.vol}</td><td>${r.rec}</td><td>${r.carga}</td><td>${r.fte}</td></tr>`).join('')}\
+<tr><th colspan="4">TOTAL</th><th>${esc(totalOutrasCarga.innerText)}</th><th>${esc(totalOutrasFTE.innerText)}</th></tr>\
+</table>\
+\
+<h3>7–10. Consolidados</h3>\
+<table border="1">\
+<tr><th>FTE sem margem</th><td>${esc(fteSemMargem.innerText)}</td></tr>\
+<tr><th>Margem total (%)</th><td>${esc(margemTotal.innerText)}</td></tr>\
+<tr><th>FTE com margem</th><td>${esc(fteComMargem.innerText)}</td></tr>\
+<tr><th>FTE arredondado</th><td>${esc(fteArredondado.innerText)}</td></tr>\
+<tr><th>FTE atual</th><td>${esc(fteAtual.value)}</td></tr>\
+<tr><th>Utilização</th><td>${esc(utilizacao.innerText)}</td></tr>\
+</table>\
+\
+</body>\
+</html>`;
+
+      const blob = new Blob([html], {type: 'application/vnd.ms-excel;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    /* ===== EVENTOS / LISTENERS ===== */
+    document.querySelectorAll("input").forEach(i => i.addEventListener("input", () => {
+      // recalcular base sempre (mantém 1–4 e recalcula 5–10 sem quebrar)
+      recalcularBase();
+    }));
+
+    // eventos item 6
+    document.querySelectorAll(".outra-tempo, .outra-vol, .outra-rec")
+      .forEach(i => i.addEventListener("input", () => { recalcularOutrasAtividades(); recalcularConsolidado(); }));
+
+    // eventos margens e fteAtual
+    [margemTrein, margemAfast, margemFerias, fteAtual].forEach(i =>
+      i.addEventListener("input", recalcularConsolidado)
+    );
+
+    /* ===== LOAD JSON → ITEM 5 ===== */
+    getJSON("atividades").then(list => {
+      // ✅ Garante que item 5 sempre carrega do JSON
+      list.forEach(a => adicionarLinha(a.descricao, true));
+    });
+
+  </script>
+
+</body>
+</html>
