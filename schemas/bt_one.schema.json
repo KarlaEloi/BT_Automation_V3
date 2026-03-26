@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://btone.accenture/schema/bt_one.schema.json",
+  "title": "BT ONE – JSON Consolidado de Processo",
+  "description": "Contrato oficial do JSON BT ONE consolidado por Cliente e Processo",
+  "type": "object",
+  "additionalProperties": false,
+
+  "required": [
+    "schema_version",
+    "processo",
+    "entradas",
+    "saidas",
+    "atividades",
+    "sistemas",
+    "riscos",
+    "controles",
+    "taxonomia"
+  ],
+
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Versão do schema do JSON BT ONE (semantic versioning)"
+    },
+
+    "processo": {
+      "type": "object",
+      "required": ["nome", "frequencia", "objetivo", "escopo"],
+      "properties": {
+        "nome": { "type": "string" },
+        "frequencia": { "type": "string" },
+        "objetivo": { "type": "string" },
+        "escopo": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "entradas": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+
+    "saidas": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+
+    "atividades": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ordem", "descricao"],
+        "properties": {
+          "ordem": { "type": "integer" },
+          "descricao": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "sistemas": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+
+    "riscos": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+
+    "controles": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+
+    "taxonomia": {
+      "type": "array",
+      "description": "Classificação de taxonomia por atividade",
+      "items": {
+        "type": "object",
+        "required": ["atividade_dtp", "taxonomia_global", "taxonomia_latam"],
+        "properties": {
+          "atividade_dtp": {
+            "type": "object",
+            "required": ["ordem", "descricao"],
+            "properties": {
+              "ordem": { "type": "integer" },
+              "descricao": { "type": "string" }
+            },
+            "additionalProperties": false
+          },
+
+          "taxonomia_global": {
+            "type": "object",
+            "required": ["L0", "L1", "L2", "L3", "L4", "L5", "confianca"],
+            "properties": {
+              "L0": { "type": "string" },
+              "L1": { "type": "string" },
+              "L2": { "type": "string" },
+              "L3": { "type": "string" },
+              "L4": { "type": "string" },
+              "L5": { "type": "string" },
+              "confianca": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "additionalProperties": false
+          },
+
+          "taxonomia_latam": {
+            "type": "object",
+            "required": ["L0", "L1", "L2", "L3", "L4", "L5", "confianca"],
+            "properties": {
+              "L0": { "type": "string" },
+              "L1": { "type": "string" },
+              "L2": { "type": "string" },
+              "L3": { "type": "string" },
+              "L4": { "type": "string" },
+              "L5": { "type": "string" },
+              "confianca": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}
